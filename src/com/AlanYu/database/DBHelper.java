@@ -14,13 +14,15 @@ import android.util.Log;
 
 public class DBHelper extends SQLiteOpenHelper {
 
-	private static final int VERSION = 2; 
+	private static final int VERSION = 3; 
 	private static final String DATABASE_NAME = "sensorData.db";
 	private Context myContext;
 	private static final String CREATE_SENSOR_DATA_DLL = "CREATE TABLE SENSOR_MAIN ("+"_ID INTEGER PRIMARY KEY,"
 												+ "SENSOR_TYPE INTEGER,"+"X REAL,"+"Y REAL,"+"Z REAL,"+"TIME_STAMP INTEGER);"; 
 	private static final String DELETE_SENSOR_DATA_DLL = "DROP TABLE IF EXISTS SENSOR_MAIN;";
-	
+	private static final String CREATE_TOUCH_DATA_DLL = "CREATE TABLE TOUCH ("+"_ID INTEGER PRIMARY KEY,"
+												+"X REAL,"+"Y REAL,"+"PRESURE REAL,"+"DURATION REAL,"+"TIMESTAMP INTEGER);";
+	private static final String DELETE_TOUCH_DLL = "DROP TABLE IF EXISTS TOUCH";
 	public DBHelper(Context context) {
 		super(context, DATABASE_NAME, null, VERSION);
 		myContext = context; 
@@ -30,6 +32,7 @@ public class DBHelper extends SQLiteOpenHelper {
 	@Override
 	public void onCreate(SQLiteDatabase db) {
 	db.execSQL(CREATE_SENSOR_DATA_DLL);
+	db.execSQL(CREATE_TOUCH_DATA_DLL);
 	Log.d("Create DB", DATABASE_NAME);
 	}
 
@@ -37,7 +40,10 @@ public class DBHelper extends SQLiteOpenHelper {
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
 			db.execSQL(DELETE_SENSOR_DATA_DLL);
 			db.execSQL(CREATE_SENSOR_DATA_DLL);
+			db.execSQL(DELETE_SENSOR_DATA_DLL);
+			db.execSQL(CREATE_TOUCH_DATA_DLL);
 			Log.d("Upgrade DB",DATABASE_NAME);
 	}
+	
 
 }

@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Vector;
 
 import com.AlanYu.database.DBHelper;
 
@@ -33,6 +34,7 @@ public class monitorAppService extends IntentService implements SensorEventListe
 	private static final String xColumn = "X";
 	private static final String yColumn = "Y";
 	private static final String zColumn = "Z";
+	private Vector<Cursor> vc ; 
 
 	public monitorAppService() {
 		super("monitorAppService");
@@ -212,6 +214,9 @@ public class monitorAppService extends IntentService implements SensorEventListe
 				y = Double.valueOf(cursor.getString(cursor.getColumnIndex(yColumn)));
 				z = Double.valueOf(cursor.getString(cursor.getColumnIndex(zColumn)));
 				Log.d("Read Database", "x ="+x+"y="+y+"z="+z);
+				
+				// vc record all database let SVM.class to analyze 
+				vc.add(cursor);
 				cursor.moveToNext();
 			 }
 			 cursor.close();
