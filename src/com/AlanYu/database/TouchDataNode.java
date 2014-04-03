@@ -4,12 +4,22 @@ import android.database.Cursor;
 
 public class TouchDataNode {
 
+	private String id;
 	private String x;
 	private String y;
 	private String size;
 	private String pressure;
 	private String timestamp;
 	private String label;
+	private String actionType;
+
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
 
 	public String getX() {
 		return x;
@@ -59,9 +69,15 @@ public class TouchDataNode {
 		this.label = label;
 	}
 
-	public TouchDataNode() {
-		// TODO Auto-generated constructor stub
+	public String getActionType() {
+		return actionType;
 	}
 
+	public void setActionType(String actionType) {
+		this.actionType = actionType;
+	}
+
+	public TouchDataNode() {
+	}
 
 }
