@@ -155,7 +155,7 @@ public class LiveWallPaper extends WallpaperService {
 			 * ============================================================
 			 */
 			if (visible) {
-				// stopService(intent);
+				 stopService(intent);
 				SharedPreferences settings = getSharedPreferences("Preference",
 						0);
 				String name = settings.getString("name", "");
@@ -164,6 +164,7 @@ public class LiveWallPaper extends WallpaperService {
 				if (name != OWNERLABEL)
 					isTraining = false;
 			} else {
+				Log.d("invisible","sdddd");	
 				if (isInProtectList()){
 					Log.d("invisible","executed process is in the protect list ");	
 					startService(intent);
@@ -197,7 +198,7 @@ public class LiveWallPaper extends WallpaperService {
 		List<RecentTaskInfo> recentTasks = service.getRecentTasks(1,
 				ActivityManager.RECENT_WITH_EXCLUDED);
 		for (RecentTaskInfo recentTaskInfo : recentTasks) {
-			recentTaskInfo.baseIntent.toString().contains(processName);
+			return recentTaskInfo.baseIntent.toString().contains(processName);
 		}
 		return false;
 	}

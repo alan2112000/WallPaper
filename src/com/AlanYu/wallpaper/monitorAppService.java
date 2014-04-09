@@ -14,6 +14,7 @@ import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.IntentService;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -61,13 +62,16 @@ public class monitorAppService extends IntentService implements
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		String protectorApp = "氣象";
-
+		SharedPreferences settings = getSharedPreferences("Preference",
+				0);
+		userType = settings.getString("name", "");
+		
 		if (intent != null) {
 			Log.d("monitorAppService", "onStartCommand");
-			if (deleteProcessByName(protectorApp))
-				Log.d("Delete Process", protectorApp);
-			else
-				Log.d("Delete Process", "Apps not found");
+//			if (deleteProcessByName(protectorApp))
+//				Log.d("Delete Process", protectorApp);
+//			else
+//				Log.d("Delete Process", "Apps not found");
 			// check apps executing in protector list
 			// if(yes) trigger Sensor
 			// trigger userJudgement()
@@ -184,7 +188,7 @@ public class monitorAppService extends IntentService implements
 				"X :" + String.valueOf(values[0]) + " Y: "
 						+ String.valueOf(values[1]) + "z :"
 						+ String.valueOf(values[2]) + "TimeStamp :"
-						+ String.valueOf(timeStamp));
+						+ String.valueOf(timeStamp) + " use type :"+userType);
 		writeDataBase(event);
 		/*
 		 * try { readDatabase(); } catch (SQLException e) { e.printStackTrace();
@@ -204,7 +208,7 @@ public class monitorAppService extends IntentService implements
 		args.put("Y", String.valueOf(values[1]));
 		args.put("Z", String.valueOf(values[2]));
 		args.put("TIME_STAMP", String.valueOf(timeStamp));
-		args.put("USER_TYPE", userType);
+		args.put("LABEL", userType);
 		long rowid = writeSource.insert("SENSOR_MAIN", null, args);
 		Log.d("writeDatabase Event", "id =" + rowid);
 		writeSource.close();
