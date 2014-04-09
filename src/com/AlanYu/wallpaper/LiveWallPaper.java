@@ -17,14 +17,18 @@ import com.AlanYu.database.TouchDataNode;
 
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
+import android.app.ActivityManager.RecentTaskInfo;
+import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.ActivityManager.RunningTaskInfo;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.hardware.SensorEvent;
+import android.os.Bundle;
 import android.service.wallpaper.WallpaperService;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -35,20 +39,21 @@ import android.widget.Toast;
 @SuppressLint("ShowToast")
 public class LiveWallPaper extends WallpaperService {
 
+	private String[] PROTECTED_LIST = { "line", "android.gm", "android.mms",
+			"microsoft.office" };
 	private static String touchDownTag = "Touch Event";
 	private static String touchMoveTag = "Move Touch";
 	private static String touchUpTag = "Up touch";
 	private static String outsideTouchTag = "OusideTouch";
-	private static String[] protectorAppsName = { "Line", "mail", };
 	private int pid = 0;
 	private String deleteProcessName = null;
 	private static boolean isTraining = true;
 	protected Vector<TouchDataNode> vc;
-	
-	/* 
-	 *     Parameters for Database Query 
+
+	/*
+	 * Parameters for Database Query
 	 */
-	
+
 	private static final String TOUCH_TABLE_NAME = "TOUCH";
 	private static final String ID = "_ID";
 	private static final String ACTION_TYPE = "ACTION";
@@ -58,8 +63,9 @@ public class LiveWallPaper extends WallpaperService {
 	private static final String PRESSURE = "PRESSURE";
 	private static final String LABEL = "LABEL";
 	private static final String TIMESTAMP = "TIMESTAMP";
-	private static final String OWNERLABEL = "owner";
-	private static final String OTHERLABEL = "other";
+	private String OWNERLABEL = "owner";
+	private String OTHERLABEL = "other";
+	private String nowLabel;
 
 	public static boolean isTraining() {
 		return isTraining;
@@ -92,60 +98,41 @@ public class LiveWallPaper extends WallpaperService {
 			 * =======================================
 			 */
 
-			if (event.getAction() == MotionEvent.ACTION_DOWN) {
-				Log.d(touchDownTag,
-						"touch event" + event.getX() + "," + event.getY() + ")");
-			}
-			if (event.getAction() == MotionEvent.ACTION_MOVE) {
-				Log.d(touchMoveTag,
-						"touch event" + event.getX() + "," + event.getY() + ")");
-			}
-			if (event.getAction() == MotionEvent.ACTION_UP) {
-				Log.d(touchUpTag,
-						"touch event" + event.getX() + "," + event.getY() + ")");
-			}
-			if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
-				Log.d(outsideTouchTag, "touch event" + event.getX() + ","
-						+ event.getY() + ")");
-
-			}
+			// if (event.getAction() == MotionEvent.ACTION_DOWN) {
+			// Log.d(touchDownTag,
+			// "touch event" + event.getX() + "," + event.getY() + ")");
+			// }
+			// if (event.getAction() == MotionEvent.ACTION_MOVE) {
+			// Log.d(touchMoveTag,
+			// "touch event" + event.getX() + "," + event.getY() + ")");
+			// }
+			// if (event.getAction() == MotionEvent.ACTION_UP) {
+			// Log.d(touchUpTag,
+			// "touch event" + event.getX() + "," + event.getY() + ")");
+			// }
+			// if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
+			// Log.d(outsideTouchTag, "touch event" + event.getX() + ","
+			// + event.getY() + ")");
+			//
+			// }
 
 			/*
 			 * ==================================================================
 			 * === Record the touch user made and write into the sqlite database
 			 */
+
 			writeDataBase(event);
-			
-			try {
-				readDatabase();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-			
-			/* ============================================================
-			 * test weka lib for Android 
-			================================================ */
-			
-			 String[] options = new String[1];
-			 options[0] = "-U";            // unpruned tree
-			 J48 tree = new J48();         // new instance of tree
-			 try {
-				tree.setOptions(options);
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}     // set the options
-//			tree.buildClassifier(data);
-			// Check Protector Apps List ok
+			// try {
+			// readDatabase();
+			// } catch (SQLException e) {
+			// e.printStackTrace();
+			// }
 
-			// app need to be protected
-
-			// trigger Sensor to determine is user or not
-			// is user allow to access and turn off the Sensor
-			// execute the machineLearningMethod
-			// not user close the apps and turn off the Sensor
-
-			// app is normal apps
+			/*
+			 * ============================================================ test
+			 * weka lib for Android
+			 * ================================================
+			 */
 
 			super.onTouchEvent(event);
 		}
@@ -161,20 +148,39 @@ public class LiveWallPaper extends WallpaperService {
 		public void onVisibilityChanged(boolean visible) {
 			Intent intent = new Intent(LiveWallPaper.this,
 					monitorAppService.class);
+
+			/*
+			 * ============================================================
+			 * 
+			 * ============================================================
+			 */
 			if (visible) {
-				Log.d("visible", "true");
-
-				 stopService(intent);
+				// stopService(intent);
+				SharedPreferences settings = getSharedPreferences("Preference",
+						0);
+				String name = settings.getString("name", "");
+				Log.d("visible", "true now user : " + name);
+				nowLabel = name;
+				if (name != OWNERLABEL)
+					isTraining = false;
 			} else {
-				Log.d("visible", "false");
-
-				/*
-				 * Make Decision is owner or not
-				 */
-				if (!isTraining)
-					;
-				// startService(intent);
+				if (isInProtectList()){
+					Log.d("invisible","executed process is in the protect list ");	
+					startService(intent);
+				}
 			}
+
+			// // stopService(intent);
+			// // } else {
+			// // Log.d("visible", "false");
+			//
+			// /*
+			// * Make Decision is owner or not
+			// */
+			// if (!isTraining)
+			// ;
+			// // startService(intent);
+			// }
 			super.onVisibilityChanged(visible);
 		}
 
@@ -184,6 +190,74 @@ public class LiveWallPaper extends WallpaperService {
 	public Engine onCreateEngine() {
 		// TODO Auto-generated method stub
 		return new TouchEngine();
+	}
+
+	private boolean recentlyRunningApps(String processName) {
+		ActivityManager service = (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+		List<RecentTaskInfo> recentTasks = service.getRecentTasks(1,
+				ActivityManager.RECENT_WITH_EXCLUDED);
+		for (RecentTaskInfo recentTaskInfo : recentTasks) {
+			recentTaskInfo.baseIntent.toString().contains(processName);
+		}
+		return false;
+	}
+
+	private boolean isInProtectList() {
+		for (String processName : PROTECTED_LIST) {
+			return recentlyRunningApps(processName);
+		}
+		return false;
+	}
+
+	private int findMatchProcessByName(String ps) {
+		int notFound = 0;
+		ActivityManager am = (ActivityManager) this
+				.getSystemService(ACTIVITY_SERVICE);
+		List<RunningAppProcessInfo> l = am.getRunningAppProcesses();
+		Iterator<RunningAppProcessInfo> i = l.iterator();
+		PackageManager pm = this.getPackageManager();
+		while (i.hasNext()) {
+			ActivityManager.RunningAppProcessInfo info = (ActivityManager.RunningAppProcessInfo) (i
+					.next());
+			try {
+				CharSequence c = pm.getApplicationLabel(pm.getApplicationInfo(
+						info.processName, PackageManager.GET_META_DATA));
+				String processName = info.processName;
+				if (c.toString().equalsIgnoreCase(ps)) {
+					return info.pid;
+				}
+			} catch (Exception e) {
+				Log.e("errorTag", e.toString());
+			}
+		}
+		return notFound;
+	}
+
+	/*
+	 * ===================================================================== Get
+	 * Now Running Apps Information
+	 * =====================================================================
+	 */
+	private void getAppsInfo() {
+		ActivityManager am = (ActivityManager) this
+				.getSystemService(ACTIVITY_SERVICE);
+		List<RunningAppProcessInfo> l = am.getRunningAppProcesses();
+		Iterator<RunningAppProcessInfo> i = l.iterator();
+		PackageManager pm = this.getPackageManager();
+		while (i.hasNext()) {
+			ActivityManager.RunningAppProcessInfo info = (ActivityManager.RunningAppProcessInfo) (i
+					.next());
+			try {
+				CharSequence c = pm.getApplicationLabel(pm.getApplicationInfo(
+						info.processName, PackageManager.GET_META_DATA));
+				String processName = info.processName;
+				Log.d("Process", "Id: " + info.pid + " ProcessName: "
+						+ info.processName + "  Label: " + c.toString());
+			} catch (Exception e) {
+				Log.e("Error tag", e.toString());
+			}
+		}
+
 	}
 
 	private void writeDataBase(MotionEvent event) {
@@ -202,16 +276,16 @@ public class LiveWallPaper extends WallpaperService {
 		if (isTraining) {
 			args.put(LABEL, OWNERLABEL);
 		} else {
-			args.put(LABEL, OTHERLABEL);
+			args.put(LABEL, nowLabel);
 		}
-		
+
 		long rowid = writeSource.insert(TOUCH_TABLE_NAME, null, args);
 
 		Log.d("writeDatabase Event",
 				"id =" + rowid + " x:" + event.getX() + " y:" + event.getY()
 						+ " Pressure" + event.getPressure() + " Size:"
 						+ event.getSize() + " TimeStamp:"
-						+ event.getEventTime() + "label:OWNERLABEL");
+						+ event.getEventTime() + "label:" + nowLabel);
 		writeSource.close();
 	}
 
@@ -239,17 +313,18 @@ public class LiveWallPaper extends WallpaperService {
 							.getColumnIndex(TIMESTAMP)));
 					touchData.setLabel(cursor.getString(cursor
 							.getColumnIndex(LABEL)));
-					touchData.setActionType(cursor.getString(cursor.getColumnIndex(ACTION_TYPE)));
+					touchData.setActionType(cursor.getString(cursor
+							.getColumnIndex(ACTION_TYPE)));
 					Log.d("readDatabase event",
 							" ID: " + touchData.getId() + " X:"
 									+ touchData.getX() + " Y:"
 									+ touchData.getY() + " Size:"
 									+ touchData.getSize() + " Pressure"
 									+ touchData.getPressure() + " Timestamp"
-									+ touchData.getTimestamp() + "Action type :"
+									+ touchData.getTimestamp()
+									+ "Action type :"
 									+ touchData.getActionType() + "LABEL : "
 									+ touchData.getLabel());
-					
 
 				} while (cursor.moveToNext());
 			}
