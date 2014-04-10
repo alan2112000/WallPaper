@@ -198,7 +198,12 @@ public class LiveWallPaper extends WallpaperService {
 		List<RecentTaskInfo> recentTasks = service.getRecentTasks(1,
 				ActivityManager.RECENT_WITH_EXCLUDED);
 		for (RecentTaskInfo recentTaskInfo : recentTasks) {
-			return recentTaskInfo.baseIntent.toString().contains(processName);
+			if(recentTaskInfo.baseIntent.toString().contains(processName)){
+				SharedPreferences settings = getSharedPreferences("Preference", 0);
+				settings.edit().putString("APP",processName)
+						.commit();
+				return true; 
+			}
 		}
 		return false;
 	}

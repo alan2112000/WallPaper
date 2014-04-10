@@ -28,7 +28,6 @@ import android.util.Log;
 public class monitorAppService extends IntentService implements
 		SensorEventListener {
 
-	private String[] protectAppsName = { "Line", "Gmail" };
 	private String errorTag = "Exception";
 	private String sensorTag = "Sensor data";
 	private SensorManager sensorManager;
@@ -38,6 +37,7 @@ public class monitorAppService extends IntentService implements
 	private static final String zColumn = "Z";
 	private Vector<Cursor> vc;
 	private String userType;
+	private String appType;
 
 	public monitorAppService() {
 		super("monitorAppService");
@@ -61,26 +61,13 @@ public class monitorAppService extends IntentService implements
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		String protectorApp = "氣象";
-		SharedPreferences settings = getSharedPreferences("Preference",
-				0);
+		SharedPreferences settings = getSharedPreferences("Preference", 0);
+
 		userType = settings.getString("name", "");
-		
+		appType = settings.getString("APP", "");
+
 		if (intent != null) {
 			Log.d("monitorAppService", "onStartCommand");
-//			if (deleteProcessByName(protectorApp))
-//				Log.d("Delete Process", protectorApp);
-//			else
-//				Log.d("Delete Process", "Apps not found");
-			// check apps executing in protector list
-			// if(yes) trigger Sensor
-			// trigger userJudgement()
-			// if(not user)
-			// verify user password
-			// if(isUser)
-			// else kill process
-			// else let it go
-			// else let it go
 		}
 
 		else
@@ -114,11 +101,10 @@ public class monitorAppService extends IntentService implements
 		}
 
 	}
-	
 
 	/*
 	 * =====================================================================
-	 * find the pid of the Process
+	 * find the pid of the Process for purpose to kill process 
 	 * 
 	 * =====================================================================
 	 */
@@ -146,6 +132,10 @@ public class monitorAppService extends IntentService implements
 		return notFound;
 	}
 
+	/*
+	 *  pass the pid value to delete the process 
+	 * 
+	 */
 	private boolean deleteProcessByName(String ps) {
 		int pid = findMatchProcessByName(ps);
 		if (pid != 0) {
@@ -188,12 +178,9 @@ public class monitorAppService extends IntentService implements
 				"X :" + String.valueOf(values[0]) + " Y: "
 						+ String.valueOf(values[1]) + "z :"
 						+ String.valueOf(values[2]) + "TimeStamp :"
-						+ String.valueOf(timeStamp) + " use type :"+userType);
+						+ String.valueOf(timeStamp) + " use type :" + userType
+						+ "app: " + appType);
 		writeDataBase(event);
-		/*
-		 * try { readDatabase(); } catch (SQLException e) { e.printStackTrace();
-		 * }
-		 */
 	}
 
 	private void writeDataBase(SensorEvent event) {
@@ -209,6 +196,7 @@ public class monitorAppService extends IntentService implements
 		args.put("Z", String.valueOf(values[2]));
 		args.put("TIME_STAMP", String.valueOf(timeStamp));
 		args.put("LABEL", userType);
+		args.put("APP", appType);
 		long rowid = writeSource.insert("SENSOR_MAIN", null, args);
 		Log.d("writeDatabase Event", "id =" + rowid);
 		writeSource.close();
