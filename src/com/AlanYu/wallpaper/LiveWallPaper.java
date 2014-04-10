@@ -39,12 +39,8 @@ import android.widget.Toast;
 @SuppressLint("ShowToast")
 public class LiveWallPaper extends WallpaperService {
 
-	private String[] PROTECTED_LIST = { "line", "android.gm", "android.mms",
+	private String[] PROTECTED_LIST = { "line", "gm", "mms",
 			"microsoft.office" };
-	private static String touchDownTag = "Touch Event";
-	private static String touchMoveTag = "Move Touch";
-	private static String touchUpTag = "Up touch";
-	private static String outsideTouchTag = "OusideTouch";
 	private int pid = 0;
 	private String deleteProcessName = null;
 	private static boolean isTraining = true;
@@ -171,17 +167,6 @@ public class LiveWallPaper extends WallpaperService {
 				}
 			}
 
-			// // stopService(intent);
-			// // } else {
-			// // Log.d("visible", "false");
-			//
-			// /*
-			// * Make Decision is owner or not
-			// */
-			// if (!isTraining)
-			// ;
-			// // startService(intent);
-			// }
 			super.onVisibilityChanged(visible);
 		}
 
@@ -198,6 +183,7 @@ public class LiveWallPaper extends WallpaperService {
 		List<RecentTaskInfo> recentTasks = service.getRecentTasks(1,
 				ActivityManager.RECENT_WITH_EXCLUDED);
 		for (RecentTaskInfo recentTaskInfo : recentTasks) {
+			System.out.println(recentTaskInfo.baseIntent);
 			if(recentTaskInfo.baseIntent.toString().contains(processName)){
 				SharedPreferences settings = getSharedPreferences("Preference", 0);
 				settings.edit().putString("APP",processName)
@@ -210,7 +196,9 @@ public class LiveWallPaper extends WallpaperService {
 
 	private boolean isInProtectList() {
 		for (String processName : PROTECTED_LIST) {
-			return recentlyRunningApps(processName);
+			if(recentlyRunningApps(processName))
+				return true;
+					
 		}
 		return false;
 	}
