@@ -40,7 +40,7 @@ import android.widget.Toast;
 public class LiveWallPaper extends WallpaperService {
 
 	private boolean COLLECT_DATA = true;
-	private String[] PROTECTED_LIST = { "store ", "gm", "mms", "contact",
+	private String[] PROTECTED_LIST = { "vending", "gm", "mms", "contact",
 			"gallery" };
 	private int pid = 0;
 	private String deleteProcessName = null;
