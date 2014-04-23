@@ -39,8 +39,9 @@ import android.widget.Toast;
 @SuppressLint("ShowToast")
 public class LiveWallPaper extends WallpaperService {
 
-	private String[] PROTECTED_LIST = { "line", "gm", "mms",
-			"microsoft.office" };
+	private boolean COLLECT_DATA = true;
+	private String[] PROTECTED_LIST = { "store ", "gm", "mms", "contact",
+			"gallery" };
 	private int pid = 0;
 	private String deleteProcessName = null;
 	private static boolean isTraining = true;
@@ -87,42 +88,9 @@ public class LiveWallPaper extends WallpaperService {
 
 		@Override
 		public void onTouchEvent(MotionEvent event) {
-			/*
-			 * ==================================================================
-			 * === detect the touch event position
-			 * ==============================
-			 * =======================================
-			 */
 
-			// if (event.getAction() == MotionEvent.ACTION_DOWN) {
-			// Log.d(touchDownTag,
-			// "touch event" + event.getX() + "," + event.getY() + ")");
-			// }
-			// if (event.getAction() == MotionEvent.ACTION_MOVE) {
-			// Log.d(touchMoveTag,
-			// "touch event" + event.getX() + "," + event.getY() + ")");
-			// }
-			// if (event.getAction() == MotionEvent.ACTION_UP) {
-			// Log.d(touchUpTag,
-			// "touch event" + event.getX() + "," + event.getY() + ")");
-			// }
-			// if (event.getAction() == MotionEvent.ACTION_OUTSIDE) {
-			// Log.d(outsideTouchTag, "touch event" + event.getX() + ","
-			// + event.getY() + ")");
-			//
-			// }
-
-			/*
-			 * ==================================================================
-			 * === Record the touch user made and write into the sqlite database
-			 */
-
+			if(COLLECT_DATA)
 			writeDataBase(event);
-			// try {
-			// readDatabase();
-			// } catch (SQLException e) {
-			// e.printStackTrace();
-			// }
 
 			/*
 			 * ============================================================ test
@@ -151,7 +119,7 @@ public class LiveWallPaper extends WallpaperService {
 			 * ============================================================
 			 */
 			if (visible) {
-				 stopService(intent);
+				stopService(intent);
 				SharedPreferences settings = getSharedPreferences("Preference",
 						0);
 				String name = settings.getString("name", "");
@@ -160,10 +128,12 @@ public class LiveWallPaper extends WallpaperService {
 				if (name != OWNERLABEL)
 					isTraining = false;
 			} else {
-				Log.d("invisible","sdddd");	
-				if (isInProtectList()){
-					Log.d("invisible","executed process is in the protect list ");	
-					startService(intent);
+				Log.d("invisible", "sdddd");
+				if (isInProtectList()) {
+					Log.d("invisible",
+							"executed process is in the protect list ");
+					if(COLLECT_DATA)
+					 startService(intent);
 				}
 			}
 
@@ -184,11 +154,11 @@ public class LiveWallPaper extends WallpaperService {
 				ActivityManager.RECENT_WITH_EXCLUDED);
 		for (RecentTaskInfo recentTaskInfo : recentTasks) {
 			System.out.println(recentTaskInfo.baseIntent);
-			if(recentTaskInfo.baseIntent.toString().contains(processName)){
-				SharedPreferences settings = getSharedPreferences("Preference", 0);
-				settings.edit().putString("APP",processName)
-						.commit();
-				return true; 
+			if (recentTaskInfo.baseIntent.toString().contains(processName)) {
+				SharedPreferences settings = getSharedPreferences("Preference",
+						0);
+				settings.edit().putString("APP", processName).commit();
+				return true;
 			}
 		}
 		return false;
@@ -196,9 +166,9 @@ public class LiveWallPaper extends WallpaperService {
 
 	private boolean isInProtectList() {
 		for (String processName : PROTECTED_LIST) {
-			if(recentlyRunningApps(processName))
+			if (recentlyRunningApps(processName))
 				return true;
-					
+
 		}
 		return false;
 	}

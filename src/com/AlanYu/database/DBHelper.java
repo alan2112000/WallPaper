@@ -14,7 +14,7 @@ import android.util.Log;
 
 public class DBHelper extends SQLiteOpenHelper {
 
-	private static final int VERSION = 17; 
+	private static final int VERSION = 18; 
 	private static final String DATABASE_NAME = "sensorData.db";
 	private Context myContext;
 	private static final String CREATE_SENSOR_DATA_DLL = "CREATE TABLE SENSOR_MAIN ("+"_ID INTEGER PRIMARY KEY,"
