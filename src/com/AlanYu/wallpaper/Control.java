@@ -1,5 +1,7 @@
 package com.AlanYu.wallpaper;
 
+import com.AlanYu.Filter.TestFilter;
+
 import android.app.Activity;
 import android.app.WallpaperManager;
 import android.content.ComponentName;
@@ -19,7 +21,6 @@ public class Control extends Activity {
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		// TODO Auto-generated method stub
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.control);
 
@@ -57,7 +58,7 @@ public class Control extends Activity {
 
 		@Override
 		public void onClick(View v) {
-
+			TestFilter test = new TestFilter() ; 
 		}
 
 	};

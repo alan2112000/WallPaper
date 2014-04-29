@@ -8,10 +8,14 @@ import java.util.Vector;
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.NaiveBayes;
 import weka.classifiers.trees.J48;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
+import com.AlanYu.Filter.TestFilter;
 import com.AlanYu.database.DBHelper;
 import com.AlanYu.database.TouchDataNode;
 
@@ -39,13 +43,16 @@ import android.widget.Toast;
 @SuppressLint("ShowToast")
 public class LiveWallPaper extends WallpaperService {
 
-	private boolean COLLECT_DATA = true;
+	private boolean COLLECT_DATA = false;
 	private String[] PROTECTED_LIST = { "vending", "gm", "mms", "contact",
 			"gallery" };
 	private int pid = 0;
+	private TestFilter testFilter =new TestFilter(); 
 	private String deleteProcessName = null;
 	private static boolean isTraining = true;
 	protected Vector<TouchDataNode> vc;
+	private Instances trainingData;
+	private Instances testData;
 
 	/*
 	 * Parameters for Database Query
@@ -91,16 +98,24 @@ public class LiveWallPaper extends WallpaperService {
 
 			if(COLLECT_DATA)
 			writeDataBase(event);
-
+			
+			
 			/*
 			 * ============================================================ test
 			 * weka lib for Android
 			 * ================================================
 			 */
-
+			testFilter.setFeature();
+			readDatabase();
+			testFilter.setTrainingData(trainingData);
+			testFilter.setTestData(trainingData);
+			testFilter.trainingData();
+			testFilter.testData();
 			super.onTouchEvent(event);
 		}
 
+		
+		
 		/*
 		 * ============================================================ if
 		 * wallpaperService is forebackground then kill monitorAppsService else
@@ -253,17 +268,25 @@ public class LiveWallPaper extends WallpaperService {
 		writeSource.close();
 	}
 
-	private void readDatabase() throws SQLException {
+	private void readDatabase()  {
 		DBHelper db = new DBHelper(this);
 		SQLiteDatabase readSource = db.getReadableDatabase();
 
 		Cursor cursor = readSource.query(TOUCH_TABLE_NAME, new String[] { ID,
 				X, Y, PRESSURE, LABEL, SIZE, TIMESTAMP, ACTION_TYPE }, null,
 				null, null, null, null);
-
+		Log.d("readDatabase", "reading database");
+//		testFilter.setInstances(cursor);
+//		testFilter.generateData();
+		FastVector fv = testFilter.getFvWekaAttributes();
+		trainingData = new Instances("Rel",fv,1000);
+//		testData = new Instances("Rel",fv,1000);
+		trainingData.setClassIndex(4);
+//		testData.setClassIndex(4);;
 		try {
 			if (cursor.moveToFirst()) {
 				do {
+					
 					TouchDataNode touchData = new TouchDataNode();
 					touchData
 							.setId(cursor.getString(cursor.getColumnIndex(ID)));
@@ -289,12 +312,32 @@ public class LiveWallPaper extends WallpaperService {
 									+ "Action type :"
 									+ touchData.getActionType() + "LABEL : "
 									+ touchData.getLabel());
+					if(touchData.getLabel().contains("domo") || touchData.getLabel().contains("Jorge") || touchData.getLabel().contains("CY")){
+						 Log.d("ReadDatabase ", "skip wrong dataset");
+					}
+					else {
+					Instance iExample = new DenseInstance(5);
+					Log.d("readDatabase", "setting instance value ");
+					
+					iExample.setValue((Attribute)fv.elementAt(0),Double.valueOf(cursor.getString(cursor.getColumnIndex(X))));
+					iExample.setValue((Attribute)fv.elementAt(1),Double.valueOf(cursor.getString(cursor.getColumnIndex(Y))));
+					iExample.setValue((Attribute)fv.elementAt(2),Double.valueOf(cursor.getString(cursor.getColumnIndex(PRESSURE))));
+					iExample.setValue((Attribute)fv.elementAt(3),Double.valueOf(cursor.getString(cursor.getColumnIndex(SIZE))));
+					iExample.setValue((Attribute)fv.elementAt(4),cursor.getString(cursor.getColumnIndex(LABEL)));
+					 
+						
+			
+					Log.d("readDatabase", "add to training set  ");
+					trainingData.add(iExample);
+					}
+//					testData.add(iExample);
 
 				} while (cursor.moveToNext());
 			}
 		} finally {
 			cursor.close();
 		}
+		cursor.close();
 		readSource.close();
 	}
 }
