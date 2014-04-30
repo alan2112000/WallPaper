@@ -1,6 +1,7 @@
 package com.AlanYu.Filter;
 
 import android.util.Log;
+import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.lazy.IBk;
 import weka.core.Instance;
@@ -19,7 +20,7 @@ public class kNNClassifier extends AbstractFilter {
 	protected void setOption() {
 		Log.d("set Option", "in seting option in classifier");
 		try {
-			String[] options = weka.core.Utils.splitOptions("-I -K 5 ");
+			String[] options = weka.core.Utils.splitOptions("-I -K 5 -F ");
 			ibk = new IBk(5);
 			ibk.setOptions(options);
 		} catch (Exception e) {
@@ -70,6 +71,11 @@ public class kNNClassifier extends AbstractFilter {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public Classifier returnClassifier() {
+		return ibk;
 	}
 
 }

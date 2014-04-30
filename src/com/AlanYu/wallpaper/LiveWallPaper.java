@@ -7,6 +7,7 @@ import java.util.Vector;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.meta.Vote;
 import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -15,7 +16,10 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
+import com.AlanYu.Filter.DecisionTableFilter;
 import com.AlanYu.Filter.J48Classifier;
+import com.AlanYu.Filter.KStarClassifier;
+import com.AlanYu.Filter.RandomForestClassifier;
 import com.AlanYu.Filter.TestFilter;
 import com.AlanYu.Filter.kNNClassifier;
 import com.AlanYu.database.DBHelper;
@@ -55,7 +59,11 @@ public class LiveWallPaper extends WallpaperService {
 	protected Vector<TouchDataNode> vc;
 	private Instances trainingData;
 	private Instances testData;
-
+	private J48Classifier j48 ; 
+	private kNNClassifier knn ; 
+	private KStarClassifier kstar;
+	private DecisionTableFilter dt; 
+	private RandomForestClassifier randomF; 
 	/*
 	 * Parameters for Database Query
 	 */
@@ -72,8 +80,7 @@ public class LiveWallPaper extends WallpaperService {
 	private String OWNERLABEL = "owner";
 	private String OTHERLABEL = "other";
 	private String nowLabel;
-	private J48Classifier j48 ; 
-	private kNNClassifier knn ; 
+	
 
 	public static boolean isTraining() {
 		return isTraining;
@@ -89,9 +96,15 @@ public class LiveWallPaper extends WallpaperService {
 		//Build classifier model 
 		j48 = new J48Classifier();
 		knn = new kNNClassifier();
+		kstar = new KStarClassifier();
+		dt = new DecisionTableFilter();
+		randomF = new RandomForestClassifier();
 		readDatabase();
 		j48.trainingData();
 		knn.trainingData();
+		kstar.trainingData();
+		dt.trainingData();
+		randomF.trainingData();
 		super.onCreate();
 	}
 
@@ -126,7 +139,28 @@ public class LiveWallPaper extends WallpaperService {
 			iExample.setValue((Attribute)fv.elementAt(1),event.getY());
 			iExample.setValue((Attribute)fv.elementAt(2),event.getPressure());
 			iExample.setValue((Attribute)fv.elementAt(3),event.getSize());
-			j48.predictInstance(iExample);
+			Instances dataUnLabeled ; 
+			dataUnLabeled = new Instances("TestInstances",knn.getFvWekaAttributes(),10);
+			dataUnLabeled.add(iExample);
+			dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes()-1);
+			Vote vote = new Vote();
+			Classifier cls[] = {j48.returnClassifier(),knn.returnClassifier(),kstar.returnClassifier(),dt.returnClassifier(),randomF.returnClassifier()};
+			vote.setClassifiers(cls);
+			double prediction[] = null ; 
+			try {
+				prediction = vote.distributionForInstance(dataUnLabeled.firstInstance());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			System.out.println("\n Resuult Vote =========");
+			for(int i=0 ;i< prediction.length;i++){
+				System.out.println("Prediction Class :"+ knn.getTrainingData().classAttribute().value(i) + " : "+Double.toString(prediction[i]));
+			}
+			
+//			j48.predictInstance(iExample);
+//			knn.predictInstance(iExample);
+//			kstar.predictInstance(iExample);
+//			dt.predictInstance(iExample);
 			super.onTouchEvent(event);
 		}
 
@@ -337,6 +371,9 @@ public class LiveWallPaper extends WallpaperService {
 					Log.d("readDatabase", "add to training set  ");
 					j48.addInstanceToTrainingData(iExample);
 					knn.addInstanceToTrainingData(iExample);
+					kstar.addInstanceToTrainingData(iExample);
+					dt.addInstanceToTrainingData(iExample);
+					randomF.addInstanceToTrainingData(iExample);
 					}
 
 				} while (cursor.moveToNext());

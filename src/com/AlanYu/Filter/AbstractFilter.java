@@ -6,11 +6,13 @@ import weka.classifiers.Classifier;
 import weka.classifiers.lazy.IBk;
 import weka.classifiers.lazy.KStar;
 import weka.classifiers.trees.J48;
+import weka.classifiers.trees.RandomForest;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.FastVector;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.classifiers.rules.DecisionTable;
 
 public abstract class AbstractFilter {
 
@@ -22,6 +24,8 @@ public abstract class AbstractFilter {
 	protected J48 tree;
 	protected IBk ibk;
 	protected KStar kstar;
+	protected DecisionTable dt; 
+	protected RandomForest randomF;
 	protected final static int CLASS_INDEX_TOUCH = 4;
 
 	protected abstract void setOption();
@@ -32,6 +36,8 @@ public abstract class AbstractFilter {
 
 	public abstract void predictInstance(Instance currentInstance);
 
+	public abstract Classifier returnClassifier();
+
 	public FastVector getFvWekaAttributes() {
 		return fvWekaAttributes;
 	}
@@ -40,7 +46,7 @@ public abstract class AbstractFilter {
 		this.fvWekaAttributes = fvWekaAttributes;
 	}
 
-	protected Instances getTrainingData() {
+	public Instances getTrainingData() {
 		return trainingData;
 	}
 
