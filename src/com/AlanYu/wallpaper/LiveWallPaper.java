@@ -15,7 +15,9 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
+import com.AlanYu.Filter.J48Classifier;
 import com.AlanYu.Filter.TestFilter;
+import com.AlanYu.Filter.kNNClassifier;
 import com.AlanYu.database.DBHelper;
 import com.AlanYu.database.TouchDataNode;
 
@@ -70,6 +72,8 @@ public class LiveWallPaper extends WallpaperService {
 	private String OWNERLABEL = "owner";
 	private String OTHERLABEL = "other";
 	private String nowLabel;
+	private J48Classifier j48 ; 
+	private kNNClassifier knn ; 
 
 	public static boolean isTraining() {
 		return isTraining;
@@ -81,6 +85,13 @@ public class LiveWallPaper extends WallpaperService {
 
 	@Override
 	public void onCreate() {
+		
+		//Build classifier model 
+		j48 = new J48Classifier();
+		knn = new kNNClassifier();
+		readDatabase();
+		j48.trainingData();
+		knn.trainingData();
 		super.onCreate();
 	}
 
@@ -105,12 +116,17 @@ public class LiveWallPaper extends WallpaperService {
 			 * weka lib for Android
 			 * ================================================
 			 */
-			testFilter.setFeature();
-			readDatabase();
-			testFilter.setTrainingData(trainingData);
-			testFilter.setTestData(trainingData);
-			testFilter.trainingData();
-			testFilter.testData();
+			
+			FastVector fv = j48.getFvWekaAttributes();
+			
+			Instance iExample = new DenseInstance(5);
+			Log.d("Prediction phase ", "Predicting the current touch user ");
+			
+			iExample.setValue((Attribute)fv.elementAt(0),event.getX());
+			iExample.setValue((Attribute)fv.elementAt(1),event.getY());
+			iExample.setValue((Attribute)fv.elementAt(2),event.getPressure());
+			iExample.setValue((Attribute)fv.elementAt(3),event.getSize());
+			j48.predictInstance(iExample);
 			super.onTouchEvent(event);
 		}
 
@@ -159,7 +175,6 @@ public class LiveWallPaper extends WallpaperService {
 
 	@Override
 	public Engine onCreateEngine() {
-		// TODO Auto-generated method stub
 		return new TouchEngine();
 	}
 
@@ -276,13 +291,7 @@ public class LiveWallPaper extends WallpaperService {
 				X, Y, PRESSURE, LABEL, SIZE, TIMESTAMP, ACTION_TYPE }, null,
 				null, null, null, null);
 		Log.d("readDatabase", "reading database");
-//		testFilter.setInstances(cursor);
-//		testFilter.generateData();
-		FastVector fv = testFilter.getFvWekaAttributes();
-		trainingData = new Instances("Rel",fv,1000);
-//		testData = new Instances("Rel",fv,1000);
-		trainingData.setClassIndex(4);
-//		testData.setClassIndex(4);;
+		FastVector fv = j48.getFvWekaAttributes();
 		try {
 			if (cursor.moveToFirst()) {
 				do {
@@ -325,12 +334,10 @@ public class LiveWallPaper extends WallpaperService {
 					iExample.setValue((Attribute)fv.elementAt(3),Double.valueOf(cursor.getString(cursor.getColumnIndex(SIZE))));
 					iExample.setValue((Attribute)fv.elementAt(4),cursor.getString(cursor.getColumnIndex(LABEL)));
 					 
-						
-			
 					Log.d("readDatabase", "add to training set  ");
-					trainingData.add(iExample);
+					j48.addInstanceToTrainingData(iExample);
+					knn.addInstanceToTrainingData(iExample);
 					}
-//					testData.add(iExample);
 
 				} while (cursor.moveToNext());
 			}

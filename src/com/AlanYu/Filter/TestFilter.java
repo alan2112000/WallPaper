@@ -11,6 +11,7 @@ import android.util.Log;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.lazy.IBk;
 import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
@@ -20,16 +21,19 @@ import weka.core.Instances;
 
 public class TestFilter {
 
+	
 	private FastVector fvWekaAttributes;
 	private Classifier cModel;
 	private Instances trainingData;
 	private Instances testData;
 	private Classifier cls;
 	private J48 tree;
-
+	private IBk ibk;
+	private Instances dataUnLabeled; 
 	public TestFilter() {
 	}
 
+	
 	public FastVector getFvWekaAttributes() {
 		return fvWekaAttributes;
 	}
@@ -56,15 +60,6 @@ public class TestFilter {
 
 	public void loadData() {
 
-		// Instance iExample = new DenseInstance(4);
-		// iExample.setValue((Attribute) fvWekaAttributes.elementAt(0), 1.0);
-		// iExample.setValue((Attribute) fvWekaAttributes.elementAt(1), 0.5);
-		// iExample.setValue((Attribute) fvWekaAttributes.elementAt(2), "gray");
-		// iExample.setValue((Attribute) fvWekaAttributes.elementAt(3),
-		// "positive");
-		//
-		// // add the instance
-		// isTrainingSet.add(iExample);
 	}
 
 	/*
@@ -79,7 +74,7 @@ public class TestFilter {
 		Evaluation eTest;
 		try {
 			eTest = new Evaluation(trainingData);
-			eTest.evaluateModel(tree, testData);
+			eTest.evaluateModel(ibk, testData);
 			System.out.println(eTest.toSummaryString(
 					"\n Results\n=============\n", false));
 		} catch (Exception e1) {
@@ -88,33 +83,27 @@ public class TestFilter {
 		return 0;
 	}
 
+	public void setOption(){
+		Log.d("set Option","in seting option in classifier");
+		try {
+			String[] options  = weka.core.Utils.splitOptions("-I -K 5 ");
+			ibk = new IBk(5);
+			ibk.setOptions(options);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 	public void trainingData() {
 
 		Log.d("TrainingData", "in traininData phase.....");
-		String[] options = new String[1];
-		options[0] = "-U";
-		tree = new J48();
 		try {
-			tree.setOptions(options);
-		} catch (Exception e1) {
-			e1.printStackTrace();
-		}
-
-		try {
-			tree.buildClassifier(trainingData);
+			ibk.buildClassifier(trainingData);
 		} catch (Exception e1) {
 			e1.printStackTrace();
 		}
 	}
 
 	public void generateData() {
-
-		// testData = new Instances("Rel", fvWekaAttributes, 10);
-		// testData.setClassIndex(3);
-		// testData.setClassIndex(4);
-
-		//
-		// Create the instance
 
 		Instance iExample = new DenseInstance(4);
 		iExample.setValue((Attribute) fvWekaAttributes.elementAt(0), 1.0);
@@ -160,6 +149,8 @@ public class TestFilter {
 
 		// isTrainingSet = new Instances("Rel", fvWekaAttributes, 1000);
 		// isTrainingSet.setClassIndex(5);
+		
+		
 	}
 
 	public void setInstances(Cursor cursor) {
@@ -183,6 +174,27 @@ public class TestFilter {
 				testData.add(iExample);
 			} while (cursor.moveToNext());
 		cursor.close();
+	}
+
+	public void predictInstance(Instance currentInstance) {
+		dataUnLabeled = new Instances("TestInstances",getFvWekaAttributes(),10);
+		dataUnLabeled.add(currentInstance);
+		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes()-1);
+		double[] prediction;
+		try {
+			prediction = ibk.distributionForInstance(dataUnLabeled.firstInstance());
+			   //output predictions
+			System.out.println("\n Result \n ====================\n");
+	        for(int i=0; i<prediction.length; i++)
+	        {
+	            System.out.println("Probability of class "+
+	                                testData.classAttribute().value(i)+
+	                               " : "+Double.toString(prediction[i]));
+	        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 }
