@@ -27,6 +27,7 @@ public abstract class AbstractFilter {
 	protected DecisionTable dt; 
 	protected RandomForest randomF;
 	protected final static int CLASS_INDEX_TOUCH = 4;
+	protected final static int CLASS_INDEX_AC = 3 ;
 
 	protected abstract void setOption();
 
@@ -83,15 +84,16 @@ public abstract class AbstractFilter {
 		// nominal attribute along with its values
 
 		// declare class attribute
-		FastVector fvClassVal = new FastVector(8);
+		FastVector fvClassVal = new FastVector(2);
 		fvClassVal.addElement("owner");
-		fvClassVal.addElement("eraser");
-		fvClassVal.addElement("fucker");
-		fvClassVal.addElement("gary");
-		fvClassVal.addElement("peg");
-		fvClassVal.addElement("weiling");
-		fvClassVal.addElement("joanne");
-		fvClassVal.addElement("mako");
+//		fvClassVal.addElement("eraser");
+//		fvClassVal.addElement("fucker");
+//		fvClassVal.addElement("gary");
+//		fvClassVal.addElement("peg");
+//		fvClassVal.addElement("weiling");
+//		fvClassVal.addElement("joanne");
+//		fvClassVal.addElement("mako");
+		fvClassVal.addElement("other");
 		Attribute classAttribute = new Attribute("the class", fvClassVal);
 
 		// Declare feature vector

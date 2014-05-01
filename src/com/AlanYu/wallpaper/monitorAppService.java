@@ -6,6 +6,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.FastVector;
+import weka.core.Instance;
+import weka.core.Instances;
+
+import com.AlanYu.Filter.J48ClassiferForAC;
 import com.AlanYu.database.DBHelper;
 
 import android.app.ActivityManager;
@@ -31,22 +38,27 @@ public class monitorAppService extends IntentService implements
 	private String errorTag = "Exception";
 	private String sensorTag = "Sensor data";
 	private SensorManager sensorManager;
+	private Vector<Cursor> vc;
+	private String userType;
+	private String appType;
+	private boolean TRAING_MODE = false ;
+	
+	// filter  
+	J48ClassiferForAC j48  ;
+	// Database parameter  
 	private static final String tableName = "SENSOR_MAIN";
 	private static final String xColumn = "X";
 	private static final String yColumn = "Y";
 	private static final String zColumn = "Z";
-	private Vector<Cursor> vc;
-	private String userType;
-	private String appType;
+	private static final String appColumn = "APP" ; 
+	private static final String labelColumn = "LABEL";
 
 	public monitorAppService() {
 		super("monitorAppService");
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -54,7 +66,7 @@ public class monitorAppService extends IntentService implements
 	public void onCreate() {
 		Log.d("monitorAppService", "onCreate");
 		sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
-
+		j48 = new J48ClassiferForAC();
 		setSensor();
 		super.onCreate();
 	}
@@ -65,7 +77,18 @@ public class monitorAppService extends IntentService implements
 
 		userType = settings.getString("name", "");
 		appType = settings.getString("APP", "");
+		
 
+		// catach the the acceleter data app name is appType and 
+		try {
+			readDatabase(appType);
+			j48.trainingData();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		Log.d("on startCommand", "finish readDtabase");
+		
+		//build the model 
 		if (intent != null) {
 			Log.d("monitorAppService", "onStartCommand");
 		}
@@ -180,6 +203,35 @@ public class monitorAppService extends IntentService implements
 						+ String.valueOf(values[2]) + "TimeStamp :"
 						+ String.valueOf(timeStamp) + " use type :" + userType
 						+ "app: " + appType);
+		//set instance  
+		FastVector fv  = j48.getFvWekaAttributes();
+		Instance iExample = new DenseInstance(4);
+		iExample.setValue((Attribute)fv.elementAt(0),values[0]);
+		iExample.setValue((Attribute)fv.elementAt(1),values[1]);
+		iExample.setValue((Attribute)fv.elementAt(2),values[2]);
+		
+		Instances dataUnLabeled = new Instances("TestInstances",fv,10);
+		dataUnLabeled.add(iExample);
+		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes()-1);
+		double[] prediction;
+		double prediction2 ; 
+		try {
+			prediction = j48.returnClassifier().distributionForInstance(dataUnLabeled.firstInstance());
+			   //output predictions
+	        for(int i=0; i<prediction.length; i++)
+	        {
+	            System.out.println("Probability of class "+
+	                                dataUnLabeled.classAttribute().value(i)+
+	                               " : "+Double.toString(prediction[i]));
+	        }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		j48.predictInstance(iExample);
+		
+		// training Mode 
+		if(TRAING_MODE )
 		writeDataBase(event);
 	}
 
@@ -202,26 +254,51 @@ public class monitorAppService extends IntentService implements
 		writeSource.close();
 	}
 
-	private void readDatabase() throws SQLException {
+	private void readDatabase(String appName) throws SQLException {
 		DBHelper db = new DBHelper(this);
 		SQLiteDatabase readSource = db.getReadableDatabase();
 		Cursor cursor = readSource.query(tableName, new String[] { xColumn,
-				yColumn, zColumn }, null, null, null, null, null);
+				yColumn, zColumn , labelColumn,appColumn }, null, null, null, null, null);
 		double x = 0, y = 0, z = 0;
 		if (cursor != null) {
 			cursor.moveToFirst();
 			while (cursor.isAfterLast() == false) {
-
 				x = Double.valueOf(cursor.getString(cursor
 						.getColumnIndex(xColumn)));
 				y = Double.valueOf(cursor.getString(cursor
 						.getColumnIndex(yColumn)));
 				z = Double.valueOf(cursor.getString(cursor
 						.getColumnIndex(zColumn)));
-				Log.d("Read Database", "x =" + x + "y=" + y + "z=" + z);
+				String label = cursor.getString(cursor.getColumnIndex(labelColumn));
+//				Log.d("Read Database", "x =" + x + "y=" + y + "z=" + z + " label : "+label);
+				
+				FastVector fv = j48.getFvWekaAttributes();
+				Instance iExample  = new DenseInstance(4);
+				if(label.contains("domo") || label.contains("CY") || label.contains("Jorge"))
+					;
+				else{
+					iExample.setValue((Attribute)fv.elementAt(0),Double
+							.valueOf(cursor.getString(cursor
+									.getColumnIndex(xColumn))));
+					iExample.setValue((Attribute) fv.elementAt(1), Double
+							.valueOf(cursor.getString(cursor
+									.getColumnIndex(yColumn))));
+					iExample.setValue((Attribute) fv.elementAt(2), Double
+							.valueOf(cursor.getString(cursor
+									.getColumnIndex(zColumn))));
+					
+					if (cursor.getString(cursor.getColumnIndex(labelColumn)).contains("owner"))
+						iExample.setValue((Attribute) fv.elementAt(3),label);
+					else
+						iExample.setValue((Attribute) fv.elementAt(3),"other");
+				}  
+					
+				
+				
 
 				// vc record all database let SVM.class to analyze
-				vc.add(cursor);
+//				vc.add(cursor);
+				j48.addInstanceToTrainingData(iExample);
 				cursor.moveToNext();
 			}
 			cursor.close();

@@ -20,7 +20,7 @@ public class kNNClassifier extends AbstractFilter {
 	protected void setOption() {
 		Log.d("set Option", "in seting option in classifier");
 		try {
-			String[] options = weka.core.Utils.splitOptions("-I -K 5 -F ");
+			String[] options = weka.core.Utils.splitOptions("-I -K 5");
 			ibk = new IBk(5);
 			ibk.setOptions(options);
 		} catch (Exception e) {
