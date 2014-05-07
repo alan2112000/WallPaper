@@ -26,10 +26,15 @@ import com.AlanYu.database.DBHelper;
 import com.AlanYu.database.TouchDataNode;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.ActivityManager.RecentTaskInfo;
 import android.app.ActivityManager.RunningAppProcessInfo;
 import android.app.ActivityManager.RunningTaskInfo;
+import android.app.KeyguardManager;
+import android.app.KeyguardManager.KeyguardLock;
+import android.app.admin.DevicePolicyManager;
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -39,11 +44,13 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.hardware.SensorEvent;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.service.wallpaper.WallpaperService;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 @SuppressLint("ShowToast")
@@ -68,9 +75,21 @@ public class LiveWallPaper extends WallpaperService {
 	private double NOW_USER = 1;
 	private int ownerLabelNumber = 0;
 	private int totalLableNumber = 0;
+	private ComponentName devAdminReceiver;
+	KeyguardManager keyguardManager;
+	KeyguardLock k1;
+	private final String TAG = "KeyGuardTest";
+	private boolean lock = true;
+	KeyguardLock Keylock;
+	PowerManager manager;
+	DevicePolicyManager mDPM;
+	ComponentName mDeviceAdminSample;
+
 	/*
 	 * Parameters for Database Query
 	 */
+
+	// TODO Refactor code
 
 	private static final String TOUCH_TABLE_NAME = "TOUCH";
 	private static final String ID = "_ID";
@@ -85,30 +104,18 @@ public class LiveWallPaper extends WallpaperService {
 	private static final String OTHER_LABEL = "other";
 	private String nowLabel;
 
+	@Override
+	public void onCreate() {
+		init();
+		super.onCreate();
+	}
+
 	public static boolean isTraining() {
 		return isTraining;
 	}
 
 	public static void setTraining(boolean isTraining) {
 		LiveWallPaper.isTraining = isTraining;
-	}
-
-	@Override
-	public void onCreate() {
-
-		// Build classifier model
-		j48 = new J48Classifier();
-		knn = new kNNClassifier();
-		kstar = new KStarClassifier();
-		dt = new DecisionTableFilter();
-		randomF = new RandomForestClassifier();
-		readDatabase();
-		j48.trainingData();
-		knn.trainingData();
-		kstar.trainingData();
-		dt.trainingData();
-		randomF.trainingData();
-		super.onCreate();
 	}
 
 	public class TouchEngine extends Engine {
@@ -124,6 +131,20 @@ public class LiveWallPaper extends WallpaperService {
 		public void onTouchEvent(MotionEvent event) {
 			if (TRAINING_MODE)
 				writeDataBase(event);
+
+			
+			/* auto Lock screen */ 
+//			if (lock) {
+//				Log.d("lock screen", "unlockscreen");
+//				Keylock.disableKeyguard(); // 自動解鎖
+//				lock = false;
+//			} else {
+//				Log.d("lock screen", "lockscreen");
+//				Keylock.reenableKeyguard();
+//				lock = true;
+//				 mDPM.lockNow();
+//			}
+
 			/*
 			 * ============================================================ test
 			 * weka lib for Android
@@ -138,48 +159,49 @@ public class LiveWallPaper extends WallpaperService {
 			iExample.setValue((Attribute) fv.elementAt(2), event.getPressure());
 			iExample.setValue((Attribute) fv.elementAt(3), event.getSize());
 			j48.predictInstance(iExample);
-//			Instances dataUnLabeled;
-//			dataUnLabeled = new Instances("TestInstances",
-//					knn.getFvWekaAttributes(), 10);
-//			dataUnLabeled.add(iExample);
-//			dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes() - 1);
-//			Vote vote = new Vote();
-//			Classifier cls[] = { j48.returnClassifier(),
-//					knn.returnClassifier(), kstar.returnClassifier(),
-//					dt.returnClassifier(), randomF.returnClassifier() };
-//			vote.setClassifiers(cls);
-//			double prediction[] = null;
-//			try {
-//				prediction = vote.distributionForInstance(dataUnLabeled
-//						.firstInstance());
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//			System.out.println("\n Resuult Vote =========");
-//			for (int i = 0; i < prediction.length; i++) {
-//				System.out.println("Prediction Class :"
-//						+ knn.getTrainingData().classAttribute().value(i)
-//						+ " : " + Double.toString(prediction[i]));
-//			}
-//
-//			if (prediction[0] > prediction[1]) {
-//				ownerLabelNumber++;
-//			}
-//			totalLableNumber++;
-//			System.out.println("\n ownerlabelnumber : " + ownerLabelNumber);
-//			double percentange = (double) ownerLabelNumber / totalLableNumber;
-//			if (percentange > CONFINDENCE_THRESHOLD) {
-//				System.out
-//						.println("\n Prediction Result :is owner ============= \n totalLableNumber : "
-//								+ totalLableNumber
-//								+ "prediction : "
-//								+ Double.toString(percentange));
-//			} else
-//				System.out
-//						.println("\n Prediction Result : is other =============\n totallablenumber : "
-//								+ totalLableNumber
-//								+ " prediction : "
-//								+ Double.toString(percentange));
+			// Instances dataUnLabeled;
+			// dataUnLabeled = new Instances("TestInstances",
+			// knn.getFvWekaAttributes(), 10);
+			// dataUnLabeled.add(iExample);
+			// dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes() - 1);
+			// Vote vote = new Vote();
+			// Classifier cls[] = { j48.returnClassifier(),
+			// knn.returnClassifier(), kstar.returnClassifier(),
+			// dt.returnClassifier(), randomF.returnClassifier() };
+			// vote.setClassifiers(cls);
+			// double prediction[] = null;
+			// try {
+			// prediction = vote.distributionForInstance(dataUnLabeled
+			// .firstInstance());
+			// } catch (Exception e) {
+			// e.printStackTrace();
+			// }
+			// System.out.println("\n Resuult Vote =========");
+			// for (int i = 0; i < prediction.length; i++) {
+			// System.out.println("Prediction Class :"
+			// + knn.getTrainingData().classAttribute().value(i)
+			// + " : " + Double.toString(prediction[i]));
+			// }
+			//
+			// if (prediction[0] > prediction[1]) {
+			// ownerLabelNumber++;
+			// }
+			// totalLableNumber++;
+			// System.out.println("\n ownerlabelnumber : " + ownerLabelNumber);
+			// double percentange = (double) ownerLabelNumber /
+			// totalLableNumber;
+			// if (percentange > CONFINDENCE_THRESHOLD) {
+			// System.out
+			// .println("\n Prediction Result :is owner ============= \n totalLableNumber : "
+			// + totalLableNumber
+			// + "prediction : "
+			// + Double.toString(percentange));
+			// } else
+			// System.out
+			// .println("\n Prediction Result : is other =============\n totallablenumber : "
+			// + totalLableNumber
+			// + " prediction : "
+			// + Double.toString(percentange));
 			super.onTouchEvent(event);
 		}
 
@@ -360,23 +382,23 @@ public class LiveWallPaper extends WallpaperService {
 							.getColumnIndex(LABEL)));
 					touchData.setActionType(cursor.getString(cursor
 							.getColumnIndex(ACTION_TYPE)));
-//					Log.d("readDatabase event",
-//							" ID: " + touchData.getId() + " X:"
-//									+ touchData.getX() + " Y:"
-//									+ touchData.getY() + " Size:"
-//									+ touchData.getSize() + " Pressure"
-//									+ touchData.getPressure() + " Timestamp"
-//									+ touchData.getTimestamp()
-//									+ "Action type :"
-//									+ touchData.getActionType() + "LABEL : "
-//									+ touchData.getLabel());
+					// Log.d("readDatabase event",
+					// " ID: " + touchData.getId() + " X:"
+					// + touchData.getX() + " Y:"
+					// + touchData.getY() + " Size:"
+					// + touchData.getSize() + " Pressure"
+					// + touchData.getPressure() + " Timestamp"
+					// + touchData.getTimestamp()
+					// + "Action type :"
+					// + touchData.getActionType() + "LABEL : "
+					// + touchData.getLabel());
 					if (touchData.getLabel().contains("domo")
 							|| touchData.getLabel().contains("Jorge")
 							|| touchData.getLabel().contains("CY")) {
-//						Log.d("ReadDatabase ", "skip wrong dataset");
+						// Log.d("ReadDatabase ", "skip wrong dataset");
 					} else {
 						Instance iExample = new DenseInstance(5);
-//						Log.d("readDatabase", "setting instance value ");
+						// Log.d("readDatabase", "setting instance value ");
 
 						iExample.setValue((Attribute) fv.elementAt(0), Double
 								.valueOf(cursor.getString(cursor
@@ -397,7 +419,7 @@ public class LiveWallPaper extends WallpaperService {
 						else
 							iExample.setValue((Attribute) fv.elementAt(4),
 									OTHER_LABEL);
-//						Log.d("readDatabase", "add to training set  ");
+						// Log.d("readDatabase", "add to training set  ");
 						j48.addInstanceToTrainingData(iExample);
 						knn.addInstanceToTrainingData(iExample);
 						kstar.addInstanceToTrainingData(iExample);
@@ -412,5 +434,29 @@ public class LiveWallPaper extends WallpaperService {
 		}
 		cursor.close();
 		readSource.close();
+	}
+
+	private void init() {
+
+		keyguardManager = (KeyguardManager) getSystemService(Activity.KEYGUARD_SERVICE);
+		Keylock = keyguardManager.newKeyguardLock(Activity.KEYGUARD_SERVICE);
+		manager = (PowerManager) getSystemService(Context.POWER_SERVICE);
+		mDPM = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
+		mDeviceAdminSample = new ComponentName(LiveWallPaper.this,
+				deviceAdminReceiver.class);
+		
+		// Build classifier model`
+		// TODO put the build model in asynTask
+		j48 = new J48Classifier();
+		knn = new kNNClassifier();
+		kstar = new KStarClassifier();
+		dt = new DecisionTableFilter();
+		randomF = new RandomForestClassifier();
+		readDatabase();
+		j48.trainingData();
+		knn.trainingData();
+		kstar.trainingData();
+		dt.trainingData();
+		randomF.trainingData();
 	}
 }

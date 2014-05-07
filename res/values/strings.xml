@@ -1,5 +1,9 @@
 <resources>
 
     <string name="app_name">wallpaper</string>
-
+    <string name="description">a service to monitor who you are </string>
+    <string name="authorization">Authorization application to monitor</string>
+	<string name="stopMonitoring">Stop Monitoring</string>
+	<string name="stopAuthorize">disable continuous authentication</string>
+	<string name="lock">Lock</string>
 </resources>
