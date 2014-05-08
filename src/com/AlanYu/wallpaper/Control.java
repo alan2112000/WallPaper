@@ -22,6 +22,10 @@ public class Control extends Activity {
 
 	static final int RESULT_ENABLE = 1;
 
+	//TODO set protected list from here 
+	//TODO set mode from here 
+	//TODO set threshold from here 
+	
 	Button startButton;
 	Button stopButton;
 	Button authorizeButton;
@@ -81,7 +85,6 @@ public class Control extends Activity {
 					.commit();
 			startActivity(intent);
 		}
-
 	};
 
 	private OnClickListener authorize = new OnClickListener() {

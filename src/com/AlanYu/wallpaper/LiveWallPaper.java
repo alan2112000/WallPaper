@@ -16,6 +16,8 @@ import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 
+import com.AlanYu.Filter.AbstractFilter;
+import com.AlanYu.Filter.DecisionMaker;
 import com.AlanYu.Filter.DecisionTableFilter;
 import com.AlanYu.Filter.J48Classifier;
 import com.AlanYu.Filter.KStarClassifier;
@@ -56,30 +58,26 @@ import android.widget.Toast;
 @SuppressLint("ShowToast")
 public class LiveWallPaper extends WallpaperService {
 
-	private boolean TRAINING_MODE = false;
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		// TODO Auto-generated method stub
+		return super.onStartCommand(intent, flags, startId);
+	}
+
+	private int mode = DecisionMaker.TEST;
 	private String[] PROTECTED_LIST = { "vending", "gm", "mms", "contact",
 			"gallery" };
 	private int pid = 0;
-	private TestFilter testFilter = new TestFilter();
 	private String deleteProcessName = null;
-	private static boolean isTraining = true;
 	protected Vector<TouchDataNode> vc;
 	private Instances trainingData;
 	private Instances testData;
 	private J48Classifier j48;
-	private kNNClassifier knn;
-	private KStarClassifier kstar;
-	private DecisionTableFilter dt;
-	private RandomForestClassifier randomF;
+	private DecisionMaker decisionMaker;
 	private static final double CONFINDENCE_THRESHOLD = 0.5;
-	private double NOW_USER = 1;
-	private int ownerLabelNumber = 0;
-	private int totalLableNumber = 0;
-	private ComponentName devAdminReceiver;
 	KeyguardManager keyguardManager;
 	KeyguardLock k1;
 	private final String TAG = "KeyGuardTest";
-	private boolean lock = true;
 	KeyguardLock Keylock;
 	PowerManager manager;
 	DevicePolicyManager mDPM;
@@ -110,14 +108,6 @@ public class LiveWallPaper extends WallpaperService {
 		super.onCreate();
 	}
 
-	public static boolean isTraining() {
-		return isTraining;
-	}
-
-	public static void setTraining(boolean isTraining) {
-		LiveWallPaper.isTraining = isTraining;
-	}
-
 	public class TouchEngine extends Engine {
 
 		@Override
@@ -129,79 +119,25 @@ public class LiveWallPaper extends WallpaperService {
 
 		@Override
 		public void onTouchEvent(MotionEvent event) {
-			if (TRAINING_MODE)
+			if (mode == DecisionMaker.TRAINING)
 				writeDataBase(event);
 
-			
-			/* auto Lock screen */ 
-//			if (lock) {
-//				Log.d("lock screen", "unlockscreen");
-//				Keylock.disableKeyguard(); // 自動解鎖
-//				lock = false;
-//			} else {
-//				Log.d("lock screen", "lockscreen");
-//				Keylock.reenableKeyguard();
-//				lock = true;
-//				 mDPM.lockNow();
-//			}
+			else {
+				// collect to testData instances
+				FastVector fv = decisionMaker.getWekaAttributes();
+				Instance iExample = new DenseInstance(5);
+				iExample.setValue((Attribute) fv.elementAt(0), event.getX());
+				iExample.setValue((Attribute) fv.elementAt(1), event.getY());
+				iExample.setValue((Attribute) fv.elementAt(2),
+						event.getPressure());
+				iExample.setValue((Attribute) fv.elementAt(3), event.getSize());
 
-			/*
-			 * ============================================================ test
-			 * weka lib for Android
-			 * ================================================
-			 */
-			FastVector fv = j48.getFvWekaAttributes();
-			Instance iExample = new DenseInstance(5);
-			Log.d("Prediction phase ", "Predicting the current touch user ");
+				if (mode == DecisionMaker.TEST) {
+					testData.add(iExample);
+				} else
+					;
+			}
 
-			iExample.setValue((Attribute) fv.elementAt(0), event.getX());
-			iExample.setValue((Attribute) fv.elementAt(1), event.getY());
-			iExample.setValue((Attribute) fv.elementAt(2), event.getPressure());
-			iExample.setValue((Attribute) fv.elementAt(3), event.getSize());
-			j48.predictInstance(iExample);
-			// Instances dataUnLabeled;
-			// dataUnLabeled = new Instances("TestInstances",
-			// knn.getFvWekaAttributes(), 10);
-			// dataUnLabeled.add(iExample);
-			// dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes() - 1);
-			// Vote vote = new Vote();
-			// Classifier cls[] = { j48.returnClassifier(),
-			// knn.returnClassifier(), kstar.returnClassifier(),
-			// dt.returnClassifier(), randomF.returnClassifier() };
-			// vote.setClassifiers(cls);
-			// double prediction[] = null;
-			// try {
-			// prediction = vote.distributionForInstance(dataUnLabeled
-			// .firstInstance());
-			// } catch (Exception e) {
-			// e.printStackTrace();
-			// }
-			// System.out.println("\n Resuult Vote =========");
-			// for (int i = 0; i < prediction.length; i++) {
-			// System.out.println("Prediction Class :"
-			// + knn.getTrainingData().classAttribute().value(i)
-			// + " : " + Double.toString(prediction[i]));
-			// }
-			//
-			// if (prediction[0] > prediction[1]) {
-			// ownerLabelNumber++;
-			// }
-			// totalLableNumber++;
-			// System.out.println("\n ownerlabelnumber : " + ownerLabelNumber);
-			// double percentange = (double) ownerLabelNumber /
-			// totalLableNumber;
-			// if (percentange > CONFINDENCE_THRESHOLD) {
-			// System.out
-			// .println("\n Prediction Result :is owner ============= \n totalLableNumber : "
-			// + totalLableNumber
-			// + "prediction : "
-			// + Double.toString(percentange));
-			// } else
-			// System.out
-			// .println("\n Prediction Result : is other =============\n totallablenumber : "
-			// + totalLableNumber
-			// + " prediction : "
-			// + Double.toString(percentange));
 			super.onTouchEvent(event);
 		}
 
@@ -212,37 +148,54 @@ public class LiveWallPaper extends WallpaperService {
 		 * ============================================================
 		 */
 
+		@SuppressLint("NewApi")
 		@Override
 		public void onVisibilityChanged(boolean visible) {
 			Intent intent = new Intent(LiveWallPaper.this,
 					monitorAppService.class);
 
-			/*
-			 * ============================================================
-			 * 
-			 * ============================================================
-			 */
+			
 			if (visible) {
 				stopService(intent);
+				Keylock.disableKeyguard();
 				SharedPreferences settings = getSharedPreferences("Preference",
 						0);
 				String name = settings.getString("name", "");
 				Log.d("visible", "true now user : " + name);
 				nowLabel = name;
-				if (name != OWNER_LABEL)
-					isTraining = false;
+
 			} else {
-				Log.d("invisible", "sdddd");
 				if (isInProtectList()) {
 					Log.d("invisible",
 							"executed process is in the protect list ");
-					startService(intent);
+					Log.d("Decision making ","You are :"+decisionMaker.getFinalLabel(testData));
+					if(DecisionMaker.IS_OTHER == decisionMaker.getFinalLabel(testData))
+						startService(intent);
+					else 
+						;
+					
+					// TODO below is lock screen policy 
+//					if ((DecisionMaker.IS_OTHER == decisionMaker
+//							.getFinalLabel(testData))) {
+//						if (keyguardManager.) {
+//							Log.d("lock screen", "You are not the owner but u just unlock screen");
+//							Keylock.disableKeyguard();
+//						}
+//						else{
+//							Log.d("lock screen", "You are not the user");
+//							Keylock.reenableKeyguard();
+//							mDPM.lockNow();
+//						}
+//					// You are Owner 
+//					} else {
+//						Keylock.disableKeyguard();
+//						Log.d("invisible",
+//								"it's owner and apps is also  in protected list ");
+//					}
 				}
 			}
-
 			super.onVisibilityChanged(visible);
 		}
-
 	}
 
 	@Override
@@ -255,7 +208,7 @@ public class LiveWallPaper extends WallpaperService {
 		List<RecentTaskInfo> recentTasks = service.getRecentTasks(1,
 				ActivityManager.RECENT_WITH_EXCLUDED);
 		for (RecentTaskInfo recentTaskInfo : recentTasks) {
-			System.out.println(recentTaskInfo.baseIntent);
+			// System.out.println(recentTaskInfo.baseIntent);
 			if (recentTaskInfo.baseIntent.toString().contains(processName)) {
 				SharedPreferences settings = getSharedPreferences("Preference",
 						0);
@@ -339,7 +292,7 @@ public class LiveWallPaper extends WallpaperService {
 		args.put(SIZE, String.valueOf(event.getSize()));
 		args.put(TIMESTAMP, String.valueOf(event.getEventTime()));
 
-		if (isTraining) {
+		if (mode == DecisionMaker.TRAINING) {
 			args.put(LABEL, OWNER_LABEL);
 		} else {
 			args.put(LABEL, nowLabel);
@@ -357,16 +310,15 @@ public class LiveWallPaper extends WallpaperService {
 	private void readDatabase() {
 		DBHelper db = new DBHelper(this);
 		SQLiteDatabase readSource = db.getReadableDatabase();
-
 		Cursor cursor = readSource.query(TOUCH_TABLE_NAME, new String[] { ID,
 				X, Y, PRESSURE, LABEL, SIZE, TIMESTAMP, ACTION_TYPE }, null,
 				null, null, null, null);
 		Log.d("readDatabase", "reading database");
-		FastVector fv = j48.getFvWekaAttributes();
+		FastVector fv = decisionMaker.getWekaAttributes();
+
 		try {
 			if (cursor.moveToFirst()) {
 				do {
-
 					TouchDataNode touchData = new TouchDataNode();
 					touchData
 							.setId(cursor.getString(cursor.getColumnIndex(ID)));
@@ -382,23 +334,12 @@ public class LiveWallPaper extends WallpaperService {
 							.getColumnIndex(LABEL)));
 					touchData.setActionType(cursor.getString(cursor
 							.getColumnIndex(ACTION_TYPE)));
-					// Log.d("readDatabase event",
-					// " ID: " + touchData.getId() + " X:"
-					// + touchData.getX() + " Y:"
-					// + touchData.getY() + " Size:"
-					// + touchData.getSize() + " Pressure"
-					// + touchData.getPressure() + " Timestamp"
-					// + touchData.getTimestamp()
-					// + "Action type :"
-					// + touchData.getActionType() + "LABEL : "
-					// + touchData.getLabel());
+
 					if (touchData.getLabel().contains("domo")
 							|| touchData.getLabel().contains("Jorge")
 							|| touchData.getLabel().contains("CY")) {
-						// Log.d("ReadDatabase ", "skip wrong dataset");
 					} else {
 						Instance iExample = new DenseInstance(5);
-						// Log.d("readDatabase", "setting instance value ");
 
 						iExample.setValue((Attribute) fv.elementAt(0), Double
 								.valueOf(cursor.getString(cursor
@@ -419,16 +360,15 @@ public class LiveWallPaper extends WallpaperService {
 						else
 							iExample.setValue((Attribute) fv.elementAt(4),
 									OTHER_LABEL);
-						// Log.d("readDatabase", "add to training set  ");
-						j48.addInstanceToTrainingData(iExample);
-						knn.addInstanceToTrainingData(iExample);
-						kstar.addInstanceToTrainingData(iExample);
-						dt.addInstanceToTrainingData(iExample);
-						randomF.addInstanceToTrainingData(iExample);
+
+						trainingData.add(iExample);
+
 					}
 
 				} while (cursor.moveToNext());
 			}
+		} catch (Exception e1) {
+			System.out.println(e1);
 		} finally {
 			cursor.close();
 		}
@@ -436,27 +376,34 @@ public class LiveWallPaper extends WallpaperService {
 		readSource.close();
 	}
 
+	private String[] getParameterFromControl() {
+		String[] param = null;
+		return param;
+	}
+
 	private void init() {
 
+		// Build System Manager
 		keyguardManager = (KeyguardManager) getSystemService(Activity.KEYGUARD_SERVICE);
 		Keylock = keyguardManager.newKeyguardLock(Activity.KEYGUARD_SERVICE);
 		manager = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		mDPM = (DevicePolicyManager) getSystemService(Context.DEVICE_POLICY_SERVICE);
 		mDeviceAdminSample = new ComponentName(LiveWallPaper.this,
 				deviceAdminReceiver.class);
-		
-		// Build classifier model`
+
+		// Build classifier model
 		// TODO put the build model in asynTask
-		j48 = new J48Classifier();
-		knn = new kNNClassifier();
-		kstar = new KStarClassifier();
-		dt = new DecisionTableFilter();
-		randomF = new RandomForestClassifier();
-		readDatabase();
-		j48.trainingData();
-		knn.trainingData();
-		kstar.trainingData();
-		dt.trainingData();
-		randomF.trainingData();
+		decisionMaker = new DecisionMaker();
+		testData = new Instances("TestData", decisionMaker.getWekaAttributes(),
+				1000);
+		trainingData = new Instances("TrainingData",
+				decisionMaker.getWekaAttributes(), 1000);
+		trainingData.setClassIndex(trainingData.numAttributes() - 1);
+		testData.setClassIndex(testData.numAttributes() - 1);
+		if (mode == DecisionMaker.TEST)
+			readDatabase();
+
+		decisionMaker.addDataToTraining(trainingData);
+		decisionMaker.buildClassifier();
 	}
 }

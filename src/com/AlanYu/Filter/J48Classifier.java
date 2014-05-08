@@ -48,7 +48,7 @@ public class J48Classifier extends AbstractFilter {
 
 	@Override
 	public void trainingData() {
-		Log.d("TrainingData", "in traininData phase.....");
+		Log.d("TrainingData", "in J48 traininData phase....No of instances :");
 		try {
 			tree.buildClassifier(trainingData);
 		} catch (Exception e1) {

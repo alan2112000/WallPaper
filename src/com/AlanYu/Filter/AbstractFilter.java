@@ -26,8 +26,8 @@ public abstract class AbstractFilter {
 	protected KStar kstar;
 	protected DecisionTable dt; 
 	protected RandomForest randomF;
-	protected final static int CLASS_INDEX_TOUCH = 4;
-	protected final static int CLASS_INDEX_AC = 3 ;
+	public final static int CLASS_INDEX_TOUCH = 4;
+	public final static int CLASS_INDEX_AC = 3 ;
 
 	protected abstract void setOption();
 
@@ -74,7 +74,6 @@ public abstract class AbstractFilter {
 	protected void setFeature() {
 
 		Log.d("Seting Feature ", "seting feature ");
-
 		// add numeric attribute
 		Attribute attribute1 = new Attribute("x");
 		Attribute attribute2 = new Attribute("y");
@@ -86,13 +85,6 @@ public abstract class AbstractFilter {
 		// declare class attribute
 		FastVector fvClassVal = new FastVector(2);
 		fvClassVal.addElement("owner");
-//		fvClassVal.addElement("eraser");
-//		fvClassVal.addElement("fucker");
-//		fvClassVal.addElement("gary");
-//		fvClassVal.addElement("peg");
-//		fvClassVal.addElement("weiling");
-//		fvClassVal.addElement("joanne");
-//		fvClassVal.addElement("mako");
 		fvClassVal.addElement("other");
 		Attribute classAttribute = new Attribute("the class", fvClassVal);
 
@@ -103,10 +95,6 @@ public abstract class AbstractFilter {
 		fvWekaAttributes.addElement(attribute3);
 		fvWekaAttributes.addElement(attribute4);
 		fvWekaAttributes.addElement(classAttribute);
-
-		// isTrainingSet = new Instances("Rel", fvWekaAttributes, 1000);
-		// isTrainingSet.setClassIndex(5);
-
 	}
 
 	protected void setInstances(Cursor cursor) {
