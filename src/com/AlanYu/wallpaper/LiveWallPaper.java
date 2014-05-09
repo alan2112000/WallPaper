@@ -60,13 +60,10 @@ public class LiveWallPaper extends WallpaperService {
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		// TODO Auto-generated method stub
 		return super.onStartCommand(intent, flags, startId);
 	}
 
 	private int mode = DecisionMaker.TEST;
-	private String[] PROTECTED_LIST = { "vending", "gm", "mms", "contact",
-			"gallery" };
 	private int pid = 0;
 	private String deleteProcessName = null;
 	protected Vector<TouchDataNode> vc;
@@ -74,15 +71,17 @@ public class LiveWallPaper extends WallpaperService {
 	private Instances testData;
 	private J48Classifier j48;
 	private DecisionMaker decisionMaker;
-	private static final double CONFINDENCE_THRESHOLD = 0.5;
 	KeyguardManager keyguardManager;
 	KeyguardLock k1;
-	private final String TAG = "KeyGuardTest";
 	KeyguardLock Keylock;
 	PowerManager manager;
 	DevicePolicyManager mDPM;
 	ComponentName mDeviceAdminSample;
 
+	/* Parameters from Control Activity */
+	private static final double THRESHOLD = 0.3;
+	private String[] PROTECTED_LIST = { "vending", "gm", "mms", "contact",
+			"gallery" };
 	/*
 	 * Parameters for Database Query
 	 */
@@ -105,6 +104,10 @@ public class LiveWallPaper extends WallpaperService {
 	@Override
 	public void onCreate() {
 		init();
+		// TODO set parameter from the control activity
+		// 1. threshold (let user to choice three type of threshold)
+		// 2. protected list
+		// 3.
 		super.onCreate();
 	}
 
@@ -132,6 +135,7 @@ public class LiveWallPaper extends WallpaperService {
 						event.getPressure());
 				iExample.setValue((Attribute) fv.elementAt(3), event.getSize());
 
+				// test code
 				if (mode == DecisionMaker.TEST) {
 					testData.add(iExample);
 				} else
@@ -154,8 +158,8 @@ public class LiveWallPaper extends WallpaperService {
 			Intent intent = new Intent(LiveWallPaper.this,
 					monitorAppService.class);
 
-			
 			if (visible) {
+				testData.clear();
 				stopService(intent);
 				Keylock.disableKeyguard();
 				SharedPreferences settings = getSharedPreferences("Preference",
@@ -166,32 +170,37 @@ public class LiveWallPaper extends WallpaperService {
 
 			} else {
 				if (isInProtectList()) {
+					decisionMaker.setThreshold(getThreshold());
 					Log.d("invisible",
 							"executed process is in the protect list ");
-					Log.d("Decision making ","You are :"+decisionMaker.getFinalLabel(testData));
-					if(DecisionMaker.IS_OTHER == decisionMaker.getFinalLabel(testData))
+
+					if (DecisionMaker.IS_OTHER == decisionMaker
+							.getFinalLabel(testData)) {
 						startService(intent);
-					else 
-						;
-					
-					// TODO below is lock screen policy 
-//					if ((DecisionMaker.IS_OTHER == decisionMaker
-//							.getFinalLabel(testData))) {
-//						if (keyguardManager.) {
-//							Log.d("lock screen", "You are not the owner but u just unlock screen");
-//							Keylock.disableKeyguard();
-//						}
-//						else{
-//							Log.d("lock screen", "You are not the user");
-//							Keylock.reenableKeyguard();
-//							mDPM.lockNow();
-//						}
-//					// You are Owner 
-//					} else {
-//						Keylock.disableKeyguard();
-//						Log.d("invisible",
-//								"it's owner and apps is also  in protected list ");
-//					}
+						Log.d("Decision making ", "You are other");
+					} else
+						Log.d("Decision making ", "You are owner");
+					//TODO to record the recently precision and if precision always drop below 
+					// 0.5  remember to add some retraining policy 
+					// TODO below is lock screen policy
+					// if ((DecisionMaker.IS_OTHER == decisionMaker
+					// .getFinalLabel(testData))) {
+					// if (keyguardManager.) {
+					// Log.d("lock screen",
+					// "You are not the owner but u just unlock screen");
+					// Keylock.disableKeyguard();
+					// }
+					// else{
+					// Log.d("lock screen", "You are not the user");
+					// Keylock.reenableKeyguard();
+					// mDPM.lockNow();
+					// }
+					// // You are Owner
+					// } else {
+					// Keylock.disableKeyguard();
+					// Log.d("invisible",
+					// "it's owner and apps is also  in protected list ");
+					// }
 				}
 			}
 			super.onVisibilityChanged(visible);
@@ -391,7 +400,6 @@ public class LiveWallPaper extends WallpaperService {
 		mDeviceAdminSample = new ComponentName(LiveWallPaper.this,
 				deviceAdminReceiver.class);
 
-		// Build classifier model
 		// TODO put the build model in asynTask
 		decisionMaker = new DecisionMaker();
 		testData = new Instances("TestData", decisionMaker.getWekaAttributes(),
@@ -405,5 +413,9 @@ public class LiveWallPaper extends WallpaperService {
 
 		decisionMaker.addDataToTraining(trainingData);
 		decisionMaker.buildClassifier();
+	}
+
+	public static double getThreshold() {
+		return THRESHOLD;
 	}
 }

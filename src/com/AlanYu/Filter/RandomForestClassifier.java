@@ -12,6 +12,7 @@ public class RandomForestClassifier extends AbstractFilter {
 	public RandomForestClassifier() {
 		this.setFeature();
 		this.setOption();
+		this.classifierName = "RandomForest";
 		trainingData = new Instances("Rel", this.getFvWekaAttributes(), 1000);
 		trainingData.setClassIndex(CLASS_INDEX_TOUCH);
 	}
@@ -19,8 +20,11 @@ public class RandomForestClassifier extends AbstractFilter {
 	@Override
 	protected void setOption() {
 		Log.d("set Option", "in seting option in classifier");
+		String[] options = null ;
 		try {
+			options = weka.core.Utils.splitOptions("-I 10 -K 0 -S 1");
 			randomF = new RandomForest();
+			randomF.setOptions(options);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -42,23 +46,16 @@ public class RandomForestClassifier extends AbstractFilter {
 
 	@Override
 	public void predictInstance(Instance currentInstance) {
-		dataUnLabeled = new Instances("TestInstances",getFvWekaAttributes(),10);
 		dataUnLabeled.add(currentInstance);
-		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes()-1);
 		double[] prediction;
 		try {
 			prediction = randomF.distributionForInstance(dataUnLabeled.firstInstance());
 			   //output predictions
-			System.out.println("\n Result RandomForest \n ====================\n");
-	        for(int i=0; i<prediction.length; i++)
-	        {
-	            System.out.println("Probability of class "+
-	                                trainingData.classAttribute().value(i)+
-	                               " : "+Double.toString(prediction[i]));
-	        }
+			printResult(prediction);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		dataUnLabeled.remove(0);
 	}
 
 	@Override
