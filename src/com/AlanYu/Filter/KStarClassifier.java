@@ -13,6 +13,7 @@ public class KStarClassifier extends AbstractFilter {
 	public KStarClassifier() {
 		this.setFeature();
 		this.setOption();
+		this.classifierName = "KStar";
 		trainingData = new Instances("Rel", this.getFvWekaAttributes(), 1000);
 		trainingData.setClassIndex(CLASS_INDEX_TOUCH);
 	}
@@ -20,8 +21,15 @@ public class KStarClassifier extends AbstractFilter {
 	@Override
 	protected void setOption() {
 		Log.d("set Option", "in seting option in classifier");
+		String[] options = null;
+		try {
+			options = weka.core.Utils.splitOptions("-B 20 -M -a");
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
 		try {
 			kstar = new KStar();
+			kstar.setOptions(options);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -62,15 +70,11 @@ public class KStarClassifier extends AbstractFilter {
 			prediction = kstar.distributionForInstance(dataUnLabeled
 					.firstInstance());
 			// output predictions
-			System.out.println("\n Result KStar \n ====================\n");
-			for (int i = 0; i < prediction.length; i++) {
-				System.out.println("Probability of class "
-						+ trainingData.classAttribute().value(i) + " : "
-						+ Double.toString(prediction[i]));
-			}
+			this.printResult(prediction);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		dataUnLabeled.remove(0);
 	}
 
 	@Override

@@ -28,6 +28,7 @@ public abstract class AbstractFilter {
 	protected RandomForest randomF;
 	public final static int CLASS_INDEX_TOUCH = 4;
 	public final static int CLASS_INDEX_AC = 3 ;
+	protected String classifierName = null; 
 
 	protected abstract void setOption();
 
@@ -51,11 +52,11 @@ public abstract class AbstractFilter {
 		return trainingData;
 	}
 
-	protected void setTrainingData(Instances trainingData) {
+	public void setTrainingData(Instances trainingData) {
 		this.trainingData = trainingData;
 	}
 
-	protected Instances getTestData() {
+	public Instances getTestData() {
 		return testData;
 	}
 
@@ -95,8 +96,20 @@ public abstract class AbstractFilter {
 		fvWekaAttributes.addElement(attribute3);
 		fvWekaAttributes.addElement(attribute4);
 		fvWekaAttributes.addElement(classAttribute);
+		
+		dataUnLabeled = new Instances("TestInstances", getFvWekaAttributes(),
+				10);
+		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes() - 1);
 	}
 
+	protected void printResult(double[] prediction){
+		System.out.println("\n Result "+this.classifierName+ "\n =========================\n");
+		for (int i = 0; i < prediction.length; i++) {
+			System.out.println("Probability of class "
+					+ trainingData.classAttribute().value(i) + " : "
+					+ Double.toString(prediction[i]));
+		}
+	}
 	protected void setInstances(Cursor cursor) {
 
 		if (cursor.moveToFirst())

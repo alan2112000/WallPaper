@@ -1,6 +1,5 @@
 package com.AlanYu.Filter;
 
-
 import android.util.Log;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -10,26 +9,25 @@ import weka.core.Instances;
 
 public class J48Classifier extends AbstractFilter {
 
-	
-	
 	public J48Classifier() {
 		this.setFeature();
 		this.setOption();
-		trainingData = new Instances("Rel",this.getFvWekaAttributes(),1000);
+		this.classifierName = "j48";
+		trainingData = new Instances("Rel", this.getFvWekaAttributes(), 1000);
 		trainingData.setClassIndex(CLASS_INDEX_TOUCH);
 	}
 
 	@Override
 	public void setOption() {
 		Log.d("set Option", "in seting option in classifier");
-		 String[] options = new String[1];
-		 options[0] = "-U";
-		 tree = new J48();
-		 try {
-		 tree.setOptions(options);
-		 } catch (Exception e1) {
-		 e1.printStackTrace();
-		 }
+		String[] options = null;
+		tree = new J48();
+		try {
+			options = weka.core.Utils.splitOptions("-C 0.25 -M 2");
+			tree.setOptions(options);
+		} catch (Exception e1) {
+			e1.printStackTrace();
+		}
 	}
 
 	@Override
@@ -58,23 +56,16 @@ public class J48Classifier extends AbstractFilter {
 
 	@Override
 	public void predictInstance(Instance currentInstance) {
-		dataUnLabeled = new Instances("TestInstances",getFvWekaAttributes(),10);
 		dataUnLabeled.add(currentInstance);
-		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes()-1);
 		double[] prediction;
 		try {
-			prediction = tree.distributionForInstance(dataUnLabeled.firstInstance());
-			   //output predictions
-			System.out.println("\n Result J48 \n ====================\n");
-	        for(int i=0; i<prediction.length; i++)
-	        {
-	            System.out.println("Probability of class "+
-	                                trainingData.classAttribute().value(i)+
-	                               " : "+Double.toString(prediction[i]));
-	        }
+			prediction = tree.distributionForInstance(dataUnLabeled
+					.firstInstance());
+			this.printResult(prediction);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		dataUnLabeled.remove(0);
 	}
 
 	@Override

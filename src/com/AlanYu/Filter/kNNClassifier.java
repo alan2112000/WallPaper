@@ -12,6 +12,7 @@ public class kNNClassifier extends AbstractFilter {
 	public kNNClassifier() {
 		this.setFeature();
 		this.setOption();
+		this.classifierName = "kNN";
 		trainingData = new Instances("Rel", this.getFvWekaAttributes(), 1000);
 		trainingData.setClassIndex(CLASS_INDEX_TOUCH);
 	}
@@ -20,7 +21,7 @@ public class kNNClassifier extends AbstractFilter {
 	protected void setOption() {
 		Log.d("set Option", "in seting option in classifier");
 		try {
-			String[] options = weka.core.Utils.splitOptions("-I -K 5");
+			String[] options = weka.core.Utils.splitOptions("-I -W 0");
 			ibk = new IBk(5);
 			ibk.setOptions(options);
 		} catch (Exception e) {
@@ -54,23 +55,16 @@ public class kNNClassifier extends AbstractFilter {
 
 	@Override
 	public void predictInstance(Instance currentInstance) {
-		dataUnLabeled = new Instances("TestInstances",getFvWekaAttributes(),10);
 		dataUnLabeled.add(currentInstance);
-		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes()-1);
 		double[] prediction;
 		try {
 			prediction = ibk.distributionForInstance(dataUnLabeled.firstInstance());
 			   //output predictions
-			System.out.println("\n Result kNN \n ====================\n");
-	        for(int i=0; i<prediction.length; i++)
-	        {
-	            System.out.println("Probability of class "+
-	                                trainingData.classAttribute().value(i)+
-	                               " : "+Double.toString(prediction[i]));
-	        }
+			printResult(prediction);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		dataUnLabeled.remove(0);
 	}
 
 	@Override

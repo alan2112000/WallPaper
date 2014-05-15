@@ -13,6 +13,7 @@ public class DecisionTableFilter extends AbstractFilter {
 	public DecisionTableFilter() {
 		this.setFeature();
 		this.setOption();
+		this.classifierName = "Decision Table"; 
 		trainingData = new Instances("Rel", this.getFvWekaAttributes(), 1000);
 		trainingData.setClassIndex(CLASS_INDEX_TOUCH);
 	}
@@ -20,8 +21,11 @@ public class DecisionTableFilter extends AbstractFilter {
 	@Override
 	protected void setOption() {
 		Log.d("set Option", "in seting option in classifier");
+		String[] options = null; 
 		try {
 			dt = new DecisionTable();
+			options = weka.core.Utils.splitOptions("-X 1");
+			dt.setOptions(options);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -63,15 +67,11 @@ public class DecisionTableFilter extends AbstractFilter {
 			prediction = dt.distributionForInstance(dataUnLabeled
 					.firstInstance());
 			// output predictions
-			System.out.println("\n Result DecisionTable \n ====================\n");
-			for (int i = 0; i < prediction.length; i++) {
-				System.out.println("Probability of class "
-						+ trainingData.classAttribute().value(i) + " : "
-						+ Double.toString(prediction[i]));
-			}
+			this.printResult(prediction);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		dataUnLabeled.clear();
 	}
 
 	@Override
