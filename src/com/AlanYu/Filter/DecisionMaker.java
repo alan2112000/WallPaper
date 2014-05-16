@@ -16,6 +16,10 @@ public class DecisionMaker extends Vote {
 	public static final int COLLECT = 2;
 	public static final int IS_OWNER = 0;
 	public static final int IS_OTHER = 1;
+	public static final int TRUE_POSITIVE = 0 ; 
+	public static final int TRUE_NEGATIVE = 1 ;
+	public static final int FALSE_POSITIVE = 2 ;
+	public static final int FALSE_NEGATIVE = 3 ;
 
 	private J48Classifier j48;
 	private kNNClassifier knn;
@@ -26,7 +30,7 @@ public class DecisionMaker extends Vote {
 	private FastVector fvWekaAttributes;
 	private String classifierName = "Vote";
 	private Instances trainingData;
-	private double threshold ;
+	private double threshold;
 
 	public DecisionMaker() {
 		init();
@@ -70,30 +74,95 @@ public class DecisionMaker extends Vote {
 		return predictionInstances(unLabelData);
 	}
 
-	// caculate how many label is owner in the unLabelData
+	public void evaluation(Instances labeledData) {
+		int truePostive = 0;
+		int trueNegative = 0;
+		int classType = 0;
+		int falsePostive = 0;
+		int falseNegative = 0;
+		int [] result = new int[4];
+		
+		result = getStaticPerClassifier(this,labeledData);
+		printStatics(result);
+	}
+
+	public void evaluationEachClassifier(Instances labeledData)
+			throws Exception {
+
+		double[] probs = new double[labeledData.classAttribute().numValues()];
+		int[] result = new int[3];
+		for (int i = 0; i < m_Classifiers.length; i++) {
+			result = getStaticPerClassifier(getClassifier(i), labeledData);
+			printStatics(result);
+		}
+	}
+
+	private void printStatics(int[] result) {
+		int truePostive = result[TRUE_POSITIVE];
+		int trueNegative = result[TRUE_NEGATIVE];
+		int falsePostive = result[FALSE_POSITIVE];
+		int falseNegative = result[FALSE_NEGATIVE];
+		System.out.println("tp :" + truePostive + " tn:" + trueNegative
+				+ " fp:" + falsePostive + " fn:" + falseNegative);
+		double precision = (double) truePostive / (truePostive + falsePostive);
+		double recall = (double) truePostive / (truePostive + falseNegative);
+		double fMeasure = (double) 2 * precision * recall
+				/ (precision + recall);
+		Double[] result2 = new Double[3];
+		result2[0] = precision;
+		result2[1] = recall;
+		result2[2] = fMeasure;
+		System.out.println("\n----------Result-------\n");
+		System.out.println("Precisoin : "+ Double.toString(result2[0]) + "Recall: "+Double.toString(result2[1])+ 
+				" F-Measure:"+ result2[2]);
+		
+	}
+
+	private int[] getStaticPerClassifier(Classifier classifier,
+			Instances labeledData) {
+		int[] result = new int[4];
+		int classType = 0;
+		for (int i = 0; i < labeledData.numInstances(); i++) {
+			try {
+				classType = (int)classifier.classifyInstance(labeledData.instance(i));
+				if (classType == labeledData.instance(i).classValue()) {
+					if (classType == DecisionMaker.IS_OWNER)
+						result[TRUE_POSITIVE]++;
+					else
+						result[TRUE_NEGATIVE]++;
+				} else {
+					if (classType == DecisionMaker.IS_OWNER)
+						result[FALSE_POSITIVE]++;
+					else
+						result[FALSE_NEGATIVE]++;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return result;
+	}
+
 	public int predictionInstances(Instances unLabelData) {
 		int ownerLabelNumber = 0;
 		int otherLabelNumber = 0;
 		Log.d("DecisionMaker", "Predicting Label");
-		double prediction[] = null;
+		int classtype = 0;
 		for (int i = 0; i < unLabelData.numInstances(); i++) {
 			try {
-				prediction = this
-						.distributionForInstanceMajorityVoting(unLabelData
-								.instance(i));
+				classtype = this
+						.instanceMajorityVoting(unLabelData.instance(i));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			if (prediction[DecisionMaker.IS_OWNER] > prediction[DecisionMaker.IS_OTHER]) {
+			if (classtype == DecisionMaker.IS_OWNER)
 				ownerLabelNumber++;
-			}
-			otherLabelNumber++;
+			else
+				otherLabelNumber++;
 		}
-		Log.d("DecisionMaker", "owner :" + Double.toString(ownerLabelNumber)
-				+ "other : " + Double.toString(otherLabelNumber));
-		
-		double precision = (double)ownerLabelNumber/(ownerLabelNumber+otherLabelNumber);
-		if ( precision > this.getThreshold())
+		double precision = (double) ownerLabelNumber
+				/ (ownerLabelNumber + otherLabelNumber);
+		if (precision > this.getThreshold())
 			return IS_OWNER;
 		else
 			return IS_OTHER;
@@ -103,22 +172,20 @@ public class DecisionMaker extends Vote {
 		return j48.getFvWekaAttributes();
 	}
 
-	public double[] voteForInstance(Instance currentInstance) {
-
+	public int voteForInstance(Instance currentInstance) {
 		dataUnLabeled = new Instances("TestInstances",
 				this.getFvWekaAttributes(), 10);
 		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes() - 1);
 		dataUnLabeled.add(currentInstance);
 		currentInstance.setDataset(dataUnLabeled);
-		double[] prediction = new double[trainingData.numClasses()];
+		int classType = 0;
 		try {
-			prediction = this
-					.distributionForInstanceMajorityVoting(currentInstance);
+			classType = this.instanceMajorityVoting(currentInstance);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		dataUnLabeled.remove(0);
-		return prediction;
+		return classType;
 
 	}
 
@@ -177,14 +244,15 @@ public class DecisionMaker extends Vote {
 		this.fvWekaAttributes = fvWekaAttributes;
 	}
 
-	@Override
-	public double[] distributionForInstanceMajorityVoting(Instance instance)
-			throws Exception {
+	public int instanceMajorityVoting(Instance instance) throws Exception {
 
 		double[] probs = new double[instance.classAttribute().numValues()];
 		double[] votes = new double[probs.length];
 
+		// each classifier
 		for (int i = 0; i < m_Classifiers.length; i++) {
+
+			// classifie one instance and find the biggest probability label
 			probs = getClassifier(i).distributionForInstance(instance);
 			int maxIndex = 0;
 			for (int j = 0; j < probs.length; j++) {
@@ -218,12 +286,13 @@ public class DecisionMaker extends Vote {
 		// majorityIndexes.get(m_Random.nextInt(majorityIndexes.size()));
 
 		// set probs to 0
-		for (int k = 0; k < probs.length; k++)
-			probs[k] = 0;
-		probs[tmpMajorityIndex] = 1; // the class that have been voted the most
-										// receives 1
+		// for (int k = 0; k < probs.length; k++)
+		// probs[k] = 0;
+		// probs[tmpMajorityIndex] = 1; // the class that have been voted the
+		// most
+		// // receives 1
 
-		return probs;
+		return tmpMajorityIndex;
 	}
 
 	public double getThreshold() {

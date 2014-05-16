@@ -1,5 +1,6 @@
 package com.AlanYu.wallpaper;
 
+import com.AlanYu.Filter.DecisionMaker;
 import com.AlanYu.Filter.TestFilter;
 
 import android.app.Activity;
@@ -11,6 +12,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -22,16 +24,17 @@ public class Control extends Activity {
 
 	static final int RESULT_ENABLE = 1;
 
-	//TODO set protected list from here 
-	//TODO set mode from here 
-	//TODO set threshold from here 
-	
+	// TODO set protected list from here
+	// TODO set mode from here
+	// TODO set threshold from here
+
 	Button startButton;
 	Button stopButton;
 	Button authorizeButton;
 	Button disableDeviceManager;
 	Button lockButton;
 	EditText userType;
+	EditText threshold;
 	DevicePolicyManager mDPM;
 	ActivityManager mAM;
 	ComponentName mDeviceComponentName;
@@ -76,14 +79,26 @@ public class Control extends Activity {
 		public void onClick(View v) {
 			Intent intent = new Intent(
 					WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER);
-
 			intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
 					new ComponentName(com.AlanYu.wallpaper.Control.this,
 							LiveWallPaper.class));
+			setPreferences();
 			SharedPreferences settings = getSharedPreferences("Preference", 0);
-			settings.edit().putString("name", userType.getText().toString())
-					.commit();
+			Editor editor = settings.edit();
+
+			if (userType.getText().toString() == "owner") {
+				editor.putInt("Mode", DecisionMaker.TRAINING);
+			}
+			else
+				editor.putInt("Mode", DecisionMaker.TEST);
+			editor.putString("name", userType.getText().toString());
+			editor.commit();
 			startActivity(intent);
+		}
+
+		private void setPreferences() {
+			// TODO Auto-generated method stub
+			
 		}
 	};
 
@@ -141,6 +156,7 @@ public class Control extends Activity {
 		userType = (EditText) findViewById(R.id.userType);
 		authorizeButton = (Button) findViewById(R.id.authorize);
 		disableDeviceManager = (Button) findViewById(R.id.stopAuthorize);
+		threshold  = (EditText) findViewById(R.id.threshold);
 	}
 
 	private void setListener() {

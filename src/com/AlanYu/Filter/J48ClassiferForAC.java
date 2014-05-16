@@ -45,23 +45,21 @@ public class J48ClassiferForAC extends AbstractFilter {
 	}
 
 	@Override
-	public void predictInstance(Instance currentInstance) {
-		dataUnLabeled = new Instances("TestInstances",getFvWekaAttributes(),10);
+	public int predictInstance(Instance currentInstance) {
 		dataUnLabeled.add(currentInstance);
-		dataUnLabeled.setClassIndex(dataUnLabeled.numAttributes()-1);
 		double[] prediction;
 		try {
-			prediction = tree.distributionForInstance(dataUnLabeled.firstInstance());
-			   //output predictions
-	        for(int i=0; i<prediction.length; i++)
-	        {
-	            System.out.println("Probability of class "+
-	                                trainingData.classAttribute().value(i)+
-	                               " : "+Double.toString(prediction[i]));
-	        }
+			prediction = tree.distributionForInstance(dataUnLabeled
+					.firstInstance());
+			if (prediction[DecisionMaker.IS_OWNER] > prediction[DecisionMaker.IS_OTHER])
+				return DecisionMaker.IS_OWNER;
+			else
+				return DecisionMaker.IS_OTHER;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		dataUnLabeled.remove(0);
+		return 0;
 	}
 
 	@Override

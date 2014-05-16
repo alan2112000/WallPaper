@@ -45,17 +45,21 @@ public class RandomForestClassifier extends AbstractFilter {
 	}
 
 	@Override
-	public void predictInstance(Instance currentInstance) {
+	public int predictInstance(Instance currentInstance) {
 		dataUnLabeled.add(currentInstance);
 		double[] prediction;
 		try {
-			prediction = randomF.distributionForInstance(dataUnLabeled.firstInstance());
-			   //output predictions
-			printResult(prediction);
+			prediction = randomF.distributionForInstance(dataUnLabeled
+					.firstInstance());
+			if (prediction[DecisionMaker.IS_OWNER] > prediction[DecisionMaker.IS_OTHER])
+				return DecisionMaker.IS_OWNER;
+			else
+				return DecisionMaker.IS_OTHER;
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		dataUnLabeled.remove(0);
+		return 0;
 	}
 
 	@Override

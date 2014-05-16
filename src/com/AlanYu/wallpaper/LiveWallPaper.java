@@ -1,14 +1,10 @@
 package com.AlanYu.wallpaper;
 
-import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 
-import weka.classifiers.Classifier;
-import weka.classifiers.bayes.NaiveBayes;
-import weka.classifiers.meta.Vote;
-import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.DenseInstance;
 import weka.core.FastVector;
@@ -41,18 +37,16 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.hardware.SensorEvent;
-import android.os.Bundle;
 import android.os.PowerManager;
 import android.service.wallpaper.WallpaperService;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
-import android.view.View;
-import android.view.WindowManager;
 import android.widget.Toast;
 
 @SuppressLint("ShowToast")
@@ -79,9 +73,10 @@ public class LiveWallPaper extends WallpaperService {
 	ComponentName mDeviceAdminSample;
 
 	/* Parameters from Control Activity */
-	private static final double THRESHOLD = 0.3;
+	private static float THRESHOLD;
 	private String[] PROTECTED_LIST = { "vending", "gm", "mms", "contact",
 			"gallery" };
+	private static String nowLabel;
 	/*
 	 * Parameters for Database Query
 	 */
@@ -99,15 +94,14 @@ public class LiveWallPaper extends WallpaperService {
 	private static final String TIMESTAMP = "TIMESTAMP";
 	private static final String OWNER_LABEL = "owner";
 	private static final String OTHER_LABEL = "other";
-	private String nowLabel;
 
 	@Override
 	public void onCreate() {
 		init();
 		// TODO set parameter from the control activity
-		// 1. threshold (let user to choice three type of threshold)
-		// 2. protected list
-		// 3.
+		// In this version 
+		// TODO   1.  test option for precision recall and F measure   
+		// TODO   2.  
 		super.onCreate();
 	}
 
@@ -126,32 +120,19 @@ public class LiveWallPaper extends WallpaperService {
 				writeDataBase(event);
 
 			else {
-				// collect to testData instances
-				FastVector fv = decisionMaker.getWekaAttributes();
-				Instance iExample = new DenseInstance(5);
-				iExample.setValue((Attribute) fv.elementAt(0), event.getX());
-				iExample.setValue((Attribute) fv.elementAt(1), event.getY());
-				iExample.setValue((Attribute) fv.elementAt(2),
-						event.getPressure());
-				iExample.setValue((Attribute) fv.elementAt(3), event.getSize());
-
-				// test code
-				if (mode == DecisionMaker.TEST) {
-					testData.add(iExample);
-				} else
-					;
+				// percentage split test precision
+				Log.d("on create","num of test instances"+testData.numInstances());
+				decisionMaker.evaluation(testData);
+				try {
+					decisionMaker.evaluationEachClassifier(testData);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			
 			}
-
 			super.onTouchEvent(event);
 		}
-
-		/*
-		 * ============================================================ if
-		 * wallpaperService is forebackground then kill monitorAppsService else
-		 * start monitorAppsService
-		 * ============================================================
-		 */
-
+		
 		@SuppressLint("NewApi")
 		@Override
 		public void onVisibilityChanged(boolean visible) {
@@ -159,7 +140,6 @@ public class LiveWallPaper extends WallpaperService {
 					monitorAppService.class);
 
 			if (visible) {
-				testData.clear();
 				stopService(intent);
 				Keylock.disableKeyguard();
 				SharedPreferences settings = getSharedPreferences("Preference",
@@ -169,6 +149,12 @@ public class LiveWallPaper extends WallpaperService {
 				nowLabel = name;
 
 			} else {
+				/*
+				 * ============================================================ if
+				 * wallpaperService is forebackground then kill monitorAppsService else
+				 * start monitorAppsService
+				 * ============================================================
+				 */
 				if (isInProtectList()) {
 					decisionMaker.setThreshold(getThreshold());
 					Log.d("invisible",
@@ -180,8 +166,9 @@ public class LiveWallPaper extends WallpaperService {
 						Log.d("Decision making ", "You are other");
 					} else
 						Log.d("Decision making ", "You are owner");
-					//TODO to record the recently precision and if precision always drop below 
-					// 0.5  remember to add some retraining policy 
+					// TODO to record the recently precision and if precision
+					// always drop below
+					// 0.5 remember to add some retraining policy
 					// TODO below is lock screen policy
 					// if ((DecisionMaker.IS_OTHER == decisionMaker
 					// .getFinalLabel(testData))) {
@@ -232,7 +219,6 @@ public class LiveWallPaper extends WallpaperService {
 		for (String processName : PROTECTED_LIST) {
 			if (recentlyRunningApps(processName))
 				return true;
-
 		}
 		return false;
 	}
@@ -371,7 +357,6 @@ public class LiveWallPaper extends WallpaperService {
 									OTHER_LABEL);
 
 						trainingData.add(iExample);
-
 					}
 
 				} while (cursor.moveToNext());
@@ -411,8 +396,33 @@ public class LiveWallPaper extends WallpaperService {
 		if (mode == DecisionMaker.TEST)
 			readDatabase();
 
+		percentageSplit();
+		getSharedPreferenceSetting();
 		decisionMaker.addDataToTraining(trainingData);
 		decisionMaker.buildClassifier();
+
+	}
+
+	private void getSharedPreferenceSetting() {
+		SharedPreferences setting = getSharedPreferences("Preference", 0);
+		nowLabel = setting.getString("Label", OTHER_LABEL);
+		THRESHOLD = setting.getFloat("Threshold", (float) 0.5);
+		mode = setting.getInt("Mode", DecisionMaker.TEST);
+
+		// TODO get protect list from apps
+	}
+
+	private void percentageSplit() {
+		Instances inst = trainingData;
+		Random ran = new Random(System.currentTimeMillis());
+		inst.randomize(ran);
+		float percent = (float) 0.6;
+		int trainSize = (int) Math.round(inst.numInstances() * percent);
+		int testSize = inst.numInstances() - trainSize;
+		trainingData = new Instances(inst, 0, trainSize);
+		testData = new Instances(inst, trainSize, testSize);
+		Log.d("split", "testData size " + testData.numInstances()
+				+ "traindata size " + trainingData.numInstances());
 	}
 
 	public static double getThreshold() {

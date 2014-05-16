@@ -6,4 +6,5 @@
 	<string name="stopMonitoring">Stop Monitoring</string>
 	<string name="stopAuthorize">disable continuous authentication</string>
 	<string name="lock">Lock</string>
+	<string name="thresholdLabel">Please set your threshold</string>
 </resources>

@@ -36,7 +36,7 @@ public abstract class AbstractFilter {
 
 	public abstract void trainingData();
 
-	public abstract void predictInstance(Instance currentInstance);
+	public abstract int predictInstance(Instance currentInstance);
 
 	public abstract Classifier returnClassifier();
 
@@ -140,6 +140,7 @@ public abstract class AbstractFilter {
 
 	public void addInstanceToTrainingData(Instance instance) {
 		trainingData.add(instance);
+		this.predictInstance(instance);
 	}
 
 	public void addInstanceToTestData(Instance instance) {
